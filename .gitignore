@@ -1,0 +1,9 @@
+/user/node_modules
+/server/node_modules
+/admin/node_modules
+/admin/*.env
+/user/*.env
+/server/*.env
+/admin/dist
+/user/dist
+/node_modules

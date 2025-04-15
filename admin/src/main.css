@@ -1,0 +1,30 @@
+.stdropdown-container {
+    border-radius: 5px !important;
+    border: 1px solid #3e4853 !important;
+}
+
+.stdropdown-container:hover {
+    border: 1px solid #0E76FD !important;
+    box-shadow: 0 0 0 2px rgb(98 147 255 / 10%) !important;
+}
+
+.stdropdown-input > input{
+    background: transparent !important;
+    border: 0 !important;
+    color: white !important;
+    font-weight: 500 !important;
+    outline: 0 !important;
+}
+
+.stdropdown-input:focus > input{
+    background: transparent !important;
+    border: 0 !important;
+    color: white !important;
+    font-weight: 500 !important;
+    outline: 0 !important;
+}
+
+.stdropdown-menu > div {
+    font-weight: 500 !important;
+    background: #1d2630 !important;
+}
