@@ -150,77 +150,7 @@ const ArbitrageTrade = () => {
     }
   };
 
-  // Function to generate sample trade data (static)
-  const generateSampleTradeData = () => {
-    const exchanges = ['Binance', 'xtpub', 'bullish', 'Coinbase', 'Kraken', 'Bitfinex'];
-    const types = ['buy', 'sell'];
-    const cryptos = ['BTC', 'ETH', 'SOL', 'ADA', 'XRP', 'DOT'];
-    const sampleData = [];
-
-    // Generate 15 rows of sample data (we'll only show 10)
-    for (let i = 0; i < 15; i++) {
-      const type = types[i % 2]; // Alternate buy/sell
-      const crypto = cryptos[i % cryptos.length];
-      const exchange = exchanges[i % exchanges.length];
-      const orderId = `${crypto}-${Math.floor(10000 + Math.random() * 90000)}`;
-
-      // Create different price ranges for different cryptos
-      let price, amount, total;
-      switch (crypto) {
-        case 'BTC':
-          price = (40000 + Math.random() * 5000).toFixed(2);
-          amount = (0.1 + Math.random() * 0.5).toFixed(2);
-          break;
-        case 'ETH':
-          price = (2800 + Math.random() * 300).toFixed(2);
-          amount = (1 + Math.random() * 3).toFixed(2);
-          break;
-        case 'SOL':
-          price = (100 + Math.random() * 20).toFixed(2);
-          amount = (5 + Math.random() * 15).toFixed(2);
-          break;
-        case 'ADA':
-          price = (0.5 + Math.random() * 0.2).toFixed(2);
-          amount = (100 + Math.random() * 500).toFixed(2);
-          break;
-        case 'XRP':
-          price = (0.7 + Math.random() * 0.3).toFixed(2);
-          amount = (100 + Math.random() * 500).toFixed(2);
-          break;
-        case 'DOT':
-          price = (20 + Math.random() * 5).toFixed(2);
-          amount = (10 + Math.random() * 30).toFixed(2);
-          break;
-        default:
-          price = (100 + Math.random() * 50).toFixed(2);
-          amount = (1 + Math.random() * 10).toFixed(2);
-      }
-
-      total = (parseFloat(price) * parseFloat(amount)).toFixed(2);
-
-      // Create a timestamp with slight variations
-      const date = new Date();
-      date.setSeconds(date.getSeconds() - i * 5); // Each row is 5 seconds apart
-      const timestamp = `${date.toLocaleTimeString()} - ${i < 2 ? 'Just now' : i < 5 ? 'Moments ago' : 'Recently'}`;
-
-      sampleData.push({
-        exchange,
-        type,
-        orderId,
-        price: amount, // Swapped for consistency with random data
-        amount: price, // Swapped for consistency with random data
-        total,
-        timestamp,
-        id: `sample-${Date.now()}-${i}` // Add unique ID for animation tracking
-      });
-    }
-
-    // Set the sample data
-    setTradeData(sampleData);
-
-    // Create duplicated data for seamless scrolling (even for sample data)
-    setDuplicatedData([...sampleData, ...sampleData]);
-  };
+ 
 
   // Function to update metrics
   const updateMetrics = () => {
@@ -372,7 +302,7 @@ const ArbitrageTrade = () => {
       setActivatingProfit(false);
     }
   };
-
+  
   // Helper function to check if user has investments
   const checkInvestmentStatus = (userData) => {
     if (userData && userData.total_investment !== undefined) {
@@ -605,7 +535,6 @@ const ArbitrageTrade = () => {
       updateMetrics();
     }
   }, []);
-
   return (
     <>
       <Typography variant="h4" sx={{ mb: 3, fontWeight: 600, color: 'white' }}>
@@ -1114,12 +1043,15 @@ const ArbitrageTrade = () => {
                               style={{
                                 backgroundColor: alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.05),
                                 transition: 'all 0.3s ease',
-                                animation: `${trade.isNew ? fadeInDown : numberChange} 0.5s ease-out, ${trade.id === removedRowId ? slideOut : 'none'} 0.5s ease-out, ${newRowAdded && index === 0 ? flashHighlight : 'none'} 1s ease-out`,
-                                animationDelay: trade.animationDelay || `${index * 0.05}s`,
                                 opacity: trade.id === removedRowId ? 0 : 1,
-                                animationFillMode: 'forwards',
                                 position: 'relative',
-                                zIndex: trade.isNew ? 2 : 1
+                                zIndex: trade.isNew ? 2 : 1,
+                                // Use individual animation properties instead of the shorthand
+                                animationName: `${trade.isNew ? fadeInDown.name : numberChange.name}, ${trade.id === removedRowId ? slideOut.name : 'none'}, ${newRowAdded && index === 0 ? flashHighlight.name : 'none'}`,
+                                animationDuration: '0.5s, 0.5s, 1s',
+                                animationTimingFunction: 'ease-out, ease-out, ease-out',
+                                animationDelay: trade.animationDelay || `${index * 0.05}s, ${index * 0.05}s, ${index * 0.05}s`,
+                                animationFillMode: 'forwards, forwards, forwards'
                               }}
                             >
                               <td style={{ padding: '12px 16px', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1127,7 +1059,11 @@ const ArbitrageTrade = () => {
                                   fontWeight: 500,
                                   display: 'flex',
                                   alignItems: 'center',
-                                  animation: trade.isNew ? `${slideIn} 0.5s ease-out` : 'none',
+                                  // Use individual animation properties instead of the shorthand
+                                  animationName: trade.isNew ? slideIn.name : 'none',
+                                  animationDuration: '0.5s',
+                                  animationTimingFunction: 'ease-out',
+                                  animationFillMode: 'forwards',
                                   '&::before': {
                                     content: '""',
                                     display: 'inline-block',
@@ -1136,16 +1072,22 @@ const ArbitrageTrade = () => {
                                     borderRadius: '50%',
                                     backgroundColor: trade.type === 'buy' ? '#4caf50' : '#f44336',
                                     marginRight: '8px',
-                                    animation: `${pulse} 1.5s infinite`
+                                    // Use individual animation properties for pulse
+                                    animationName: `${pulse.name}`,
+                                    animationDuration: '1.5s',
+                                    animationIterationCount: 'infinite'
                                   }
                                 }}>
                                   {trade.exchange}
                                 </Typography>
                                 <Typography variant="caption" color="grey.500" sx={{
                                   pl: 2,
-                                  animation: trade.isNew ? `${fadeInUp} 0.7s ease-out` : 'none',
                                   display: 'block',
                                   opacity: trade.isNew ? 0 : 1,
+                                  // Use individual animation properties instead of the shorthand
+                                  animationName: trade.isNew ? fadeInUp.name : 'none',
+                                  animationDuration: '0.7s',
+                                  animationTimingFunction: 'ease-out',
                                   animationFillMode: 'forwards',
                                   animationDelay: '0.2s'
                                 }}>
@@ -1163,8 +1105,12 @@ const ArbitrageTrade = () => {
                                     fontSize: '0.75rem',
                                     height: '24px',
                                     transition: 'all 0.3s ease',
-                                    animation: trade.isNew ? `${glowEffect} 1.5s ease-out` : 'none',
                                     boxShadow: `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.5)}`,
+                                    // Use individual animation properties instead of the shorthand
+                                    animationName: trade.isNew ? glowEffect.name : 'none',
+                                    animationDuration: '1.5s',
+                                    animationTimingFunction: 'ease-out',
+                                    animationFillMode: 'forwards',
                                     '&:hover': {
                                       transform: 'scale(1.05)',
                                       boxShadow: `0 0 12px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}`
@@ -1178,11 +1124,13 @@ const ArbitrageTrade = () => {
                                   textOverflow: 'ellipsis',
                                   fontFamily: 'monospace',
                                   letterSpacing: '0.5px',
-                                  animation: trade.isNew ? `${typewriter} 0.5s steps(40, end)` : 'none',
                                   whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
                                   borderRight: trade.isNew ? '2px solid transparent' : 'none',
                                   width: trade.isNew ? '0' : '100%',
+                                  // Use individual animation properties instead of the shorthand
+                                  animationName: trade.isNew ? typewriter.name : 'none',
+                                  animationDuration: '0.5s',
+                                  animationTimingFunction: 'steps(40, end)',
                                   animationFillMode: 'forwards'
                                 }}>
                                   {trade.orderId}
@@ -1191,10 +1139,13 @@ const ArbitrageTrade = () => {
                               <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 <Typography variant="body2" color={trade.type === 'buy' ? 'success.light' : 'error.light'} sx={{
                                   fontWeight: 600,
-                                  animation: trade.isNew ? `${fadeInDown} 0.5s ease-out` : 'none',
                                   opacity: trade.isNew ? 0 : 1,
-                                  animationFillMode: 'forwards',
-                                  textShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}` : 'none'
+                                  textShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}` : 'none',
+                                  // Use individual animation properties instead of the shorthand
+                                  animationName: trade.isNew ? fadeInDown.name : 'none',
+                                  animationDuration: '0.5s',
+                                  animationTimingFunction: 'ease-out',
+                                  animationFillMode: 'forwards'
                                 }}>
                                   ₿ {trade.price}
                                 </Typography>
@@ -1202,11 +1153,14 @@ const ArbitrageTrade = () => {
                               <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 <Typography variant="body2" color={trade.type === 'buy' ? 'success.light' : 'error.light'} sx={{
                                   fontWeight: 600,
-                                  animation: trade.isNew ? `${fadeInDown} 0.5s ease-out` : 'none',
                                   opacity: trade.isNew ? 0 : 1,
+                                  textShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}` : 'none',
+                                  // Use individual animation properties instead of the shorthand
+                                  animationName: trade.isNew ? fadeInDown.name : 'none',
+                                  animationDuration: '0.5s',
+                                  animationTimingFunction: 'ease-out',
                                   animationFillMode: 'forwards',
-                                  animationDelay: '0.1s',
-                                  textShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}` : 'none'
+                                  animationDelay: '0.1s'
                                 }}>
                                   ₮ {trade.amount}
                                 </Typography>
@@ -1214,12 +1168,15 @@ const ArbitrageTrade = () => {
                               <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 <Typography variant="body2" color={trade.type === 'buy' ? 'success.light' : 'error.light'} sx={{
                                   fontWeight: 700,
-                                  animation: trade.isNew ? `${fadeInDown} 0.5s ease-out` : 'none',
                                   opacity: trade.isNew ? 0 : 1,
-                                  animationFillMode: 'forwards',
-                                  animationDelay: '0.2s',
                                   fontSize: '0.9rem',
-                                  textShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}` : 'none'
+                                  textShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}` : 'none',
+                                  // Use individual animation properties instead of the shorthand
+                                  animationName: trade.isNew ? fadeInDown.name : 'none',
+                                  animationDuration: '0.5s',
+                                  animationTimingFunction: 'ease-out',
+                                  animationFillMode: 'forwards',
+                                  animationDelay: '0.2s'
                                 }}>
                                   ₮ {trade.total}
                                 </Typography>

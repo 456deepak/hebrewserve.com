@@ -80,6 +80,69 @@ function checkMediaExistence(input) {
  **************************/
 module.exports = {
 
+    /**
+     * Method to get Dashboard Data
+     * This endpoint aggregates all necessary data for the dashboard
+     */
+    dashboardData: async (req, res) => {
+        let user = req.user;
+        let id = user.sub;
+        log.info('Received request for Dashboard Data for User:', id);
+        let responseData = {};
+
+        try {
+            // Get basic user data
+            let userData = await userDbHandler.getById(id, { password: 0 });
+            if (!userData) {
+                responseData.msg = 'User not found';
+                return responseHelper.error(res, responseData);
+            }
+
+            // Calculate daily profit (2.5% of total investment)
+            const dailyProfit = userData.total_investment ? userData.total_investment * (userData.trade_booster / 100) : 0;
+
+            // Get income summaries by type
+            const incomeTypes = ['daily_profit', 'first_deposit_bonus', 'referral_bonus', 'team_commission', 'active_member_reward'];
+            const incomeSummaries = {};
+
+            // Get all income records for this user
+            const incomeRecords = await incomeDbHandler.getByQuery({ user_id: id, status: 'credited' });
+
+            // Calculate totals for each income type
+            incomeTypes.forEach(type => {
+                const typeRecords = incomeRecords.filter(record => record.type === type);
+                incomeSummaries[type] = typeRecords.reduce((sum, record) => sum + record.amount, 0);
+            });
+
+            // Get direct referrals count
+            const directReferrals = await userDbHandler.getCount(id);
+
+            // Calculate total earnings
+            const totalEarnings = Object.values(incomeSummaries).reduce((sum, val) => sum + val, 0);
+
+            // Prepare dashboard data
+            const dashboardData = {
+                ...userData.toJSON(),
+                daily_profit: incomeSummaries.daily_profit || dailyProfit,
+                first_deposit_bonus: incomeSummaries.first_deposit_bonus || 0,
+                referral_bonus: incomeSummaries.referral_bonus || 0,
+                team_commission: incomeSummaries.team_commission || 0,
+                active_member_reward: incomeSummaries.active_member_reward || 0,
+                direct_referrals: directReferrals,
+                total_earnings: totalEarnings
+            };
+
+            responseData.msg = `Dashboard Data Fetched Successfully!`;
+            responseData.data = dashboardData;
+            return responseHelper.success(res, responseData);
+
+        } catch (error) {
+            log.error('Failed to get dashboard data with error:', error);
+            responseData.msg = 'Failed to get dashboard data';
+            return responseHelper.error(res, responseData);
+        }
+    },
+
     socialMediaVerification: async (req, res) => {
         let responseData = {};
         let user = req.user;

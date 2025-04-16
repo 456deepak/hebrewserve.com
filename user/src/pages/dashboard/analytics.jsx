@@ -68,7 +68,7 @@ export default function DashboardAnalytics() {
       const response = await fetch(url, options);
       const data = await response.json();
 
-      console.log('CoinDesk API response:', data);
+      //console.log('CoinDesk API response:', data);
 
       // Transform the data to match our format
       // Since we don't know the exact structure of the CoinDesk API response,
@@ -187,23 +187,23 @@ export default function DashboardAnalytics() {
 
     setTradeData(randomData);
   };
-   
-  console.log(userData);
+
+
 
 
   // Function to handle daily profit activation
   const handleActivateDailyProfit = async () => {
     try {
       setActivatingProfit(true);
-      console.log('Activating daily profit...');
+      //console.log('Activating daily profit...');
       const response = await axios.post('/user/activate-daily-profit');
-      console.log('Activation response:', response.data);
+      //console.log('Activation response:', response.data);
 
       if (response.data?.status) {
         // Check if the response includes the updated user data
         if (response.data?.data?.user) {
           const updatedUserData = response.data.data.user;
-          console.log('Updated user data from activation response:', updatedUserData);
+          //console.log('Updated user data from activation response:', updatedUserData);
 
           // Set the updated user data
           setUserData(updatedUserData);
@@ -223,7 +223,7 @@ export default function DashboardAnalytics() {
           if (userId) {
             localStorage.setItem(`dailyProfitActivated_${userId}`, 'true');
             localStorage.setItem(`activationDate_${userId}`, new Date().toDateString());
-            console.log(`Stored activation state for user ${userId} in localStorage`);
+            //console.log(`Stored activation state for user ${userId} in localStorage`);
           }
         } else {
           // If the response doesn't include user data, fetch it separately
@@ -231,7 +231,7 @@ export default function DashboardAnalytics() {
             const profileResponse = await axios.get('/user/profile');
             if (profileResponse.data?.status) {
               const updatedUserData = profileResponse.data.result;
-              console.log('Updated user data after activation:', updatedUserData);
+              //console.log('Updated user data after activation:', updatedUserData);
 
               // Set the updated user data
               setUserData(updatedUserData);
@@ -251,7 +251,7 @@ export default function DashboardAnalytics() {
               if (userId) {
                 localStorage.setItem(`dailyProfitActivated_${userId}`, 'true');
                 localStorage.setItem(`activationDate_${userId}`, new Date().toDateString());
-                console.log(`Stored activation state for user ${userId} in localStorage`);
+                //console.log(`Stored activation state for user ${userId} in localStorage`);
               }
             }
           } catch (profileError) {
@@ -310,23 +310,92 @@ export default function DashboardAnalytics() {
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
+        console.log('Fetching user profile...');
 
         // Always generate sample trade data regardless of activation status
         // This ensures the table is always visible
         generateSampleTradeData();
 
-        const response = await axios.get('/user/profile');
+        console.log('Making API call to /user/dashboard-data');
+        // Use the new dashboard-data endpoint that provides all necessary data
+        const response = await axios.get('/user/dashboard-data');
+
+        // If no response, try a fallback approach
+        if (!response || !response.data) {
+          console.warn('No response data received, trying alternative endpoint');
+          const fallbackResponse = await fetch('https://server.hebrewserve.com/api/v1/user/dashboard-data', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('serviceToken')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            console.log('Fallback data received:', fallbackData);
+            return fallbackData;
+          } else {
+            console.error('Fallback request failed:', fallbackResponse.status);
+            // Try the original profile endpoint as a last resort
+            const profileResponse = await axios.get('/user/profile');
+            if (profileResponse && profileResponse.data) {
+              console.log('Using profile data as fallback');
+              return profileResponse.data;
+            }
+            throw new Error('All API requests failed');
+          }
+        }
+        console.log('API response:', response);
 
         if (response.data?.status) {
-          const userData = response.data.result;
+          // The data is in response.data.data, not response.data.result
+          const userData = response.data.data;
+          console.log('Dashboard data received:', userData);
+
+          // Check if we received valid user data
+          if (!userData || Object.keys(userData).length === 0) {
+            console.warn('Received empty user data from API');
+            // Set default user data
+            const defaultUserData = {
+              wallet: 0,
+              total_investment: 0,
+              total_earnings: 0,
+              daily_profit: 0,
+              first_deposit_bonus: 0,
+              referral_bonus: 0,
+              team_commission: 0,
+              direct_referrals: 0,
+              active_member_reward: 0,
+              username: 'User',
+              sponsorID: 'admin',
+              dailyProfitActivated: false
+            };
+            setUserData(defaultUserData);
+            throw new Error('Empty user data received');
+          }
+
+          // Log the data received from the backend
+          console.log('Dashboard data received from API:', userData);
+
+          // Ensure all required fields exist with default values if not provided
+          userData.daily_profit = userData.daily_profit || 0;
+          userData.first_deposit_bonus = userData.first_deposit_bonus || 0;
+          userData.referral_bonus = userData.referral_bonus || 0;
+          userData.team_commission = userData.team_commission || 0;
+          userData.direct_referrals = userData.direct_referrals || 0;
+          userData.active_member_reward = userData.active_member_reward || 0;
+          userData.total_earnings = userData.total_earnings || 0;
+
+          console.log('Dashboard data after ensuring defaults:', userData);
 
           // Get user ID for user-specific localStorage items
           const userId = userData?._id;
-          console.log('User data from server:', userData);
+          //console.log('User data from server:', userData);
 
           // Check if user has activated daily profit (from database)
           let isActivated = userData.dailyProfitActivated === true;
-          console.log('Initial activation status from database:', isActivated);
+          //console.log('Initial activation status from database:', isActivated);
 
           // Only check localStorage if we have a userId
           if (userId && !isActivated) {
@@ -335,11 +404,11 @@ export default function DashboardAnalytics() {
             const storedDate = localStorage.getItem(`activationDate_${userId}`);
             const today = new Date().toDateString();
 
-            console.log(`Checking localStorage for user ${userId}:`, {
-              storedActivation,
-              storedDate,
-              today
-            });
+            // console.log(`Checking localStorage for user ${userId}:`, {
+            //   storedActivation,
+            //   storedDate,
+            //   today
+            // });
 
             // If we have a valid user-specific localStorage activation but server doesn't show it,
             // update the userData to reflect the activation
@@ -347,7 +416,7 @@ export default function DashboardAnalytics() {
               // Set directly in user document
               userData.dailyProfitActivated = true;
               isActivated = true;
-              console.log(`Using activation state from localStorage for user ${userId}`);
+              //console.log(`Using activation state from localStorage for user ${userId}`);
             }
           }
 
@@ -357,14 +426,51 @@ export default function DashboardAnalytics() {
 
           // If user has already activated daily profit, fetch live trade data
           if (isActivated) {
-            console.log('User has already activated daily profit, fetching live trade data');
+            //console.log('User has already activated daily profit, fetching live trade data');
             fetchLiveTradeData();
           } else {
-            console.log('User has not activated daily profit yet');
+            //console.log('User has not activated daily profit yet');
           }
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
+        console.error('Error details:', error.response ? error.response.data : 'No response data');
+
+        // Try to load default data if API fails
+        // Check if we have any user data in localStorage that we can use
+        const storedUserData = localStorage.getItem('userData');
+        let defaultUserData;
+
+        if (storedUserData) {
+          try {
+            defaultUserData = JSON.parse(storedUserData);
+            console.log('Using stored user data from localStorage:', defaultUserData);
+          } catch (e) {
+            console.error('Error parsing stored user data:', e);
+            defaultUserData = null;
+          }
+        }
+
+        // If no stored data or parsing failed, use default values
+        if (!defaultUserData) {
+          defaultUserData = {
+            wallet: 0,
+            total_investment: 0,
+            total_earnings: 0,
+            daily_profit: 0,
+            first_deposit_bonus: 0,
+            referral_bonus: 0,
+            team_commission: 0,
+            direct_referrals: 0,
+            active_member_reward: 0,
+            username: 'User',
+            sponsorID: 'admin',
+            dailyProfitActivated: false
+          };
+        }
+
+        console.log('Loading default user data as fallback');
+        setUserData(defaultUserData);
       } finally {
         setLoading(false);
       }
@@ -378,7 +484,7 @@ export default function DashboardAnalytics() {
     if (userData?.dailyProfitActivated === true) {
       // Fetch data once when activated
       fetchLiveTradeData();
-           
+
       // No need for interval as we're using animation for continuous scrolling
     }
   }, [userData?.dailyProfitActivated]);

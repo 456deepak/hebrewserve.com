@@ -153,6 +153,7 @@ module.exports = () => {
     // Router.post('/login', userInfoController.login)
     Router.get('/user/logout', userInfoController.logout);
     Router.get('/user/profile', userInfoController.profile);
+    Router.get('/user/dashboard-data', userInfoController.dashboardData);
     Router.post('/socialMediaVerification/', userInfoController.socialMediaVerification)
 
     Router.put('/user/update_profile', [multerService.uploadFile('avatar').single('avatar'), validationMiddleware(userInfoValidation.updateProfile, 'body')], userInfoController.updateProfile);
