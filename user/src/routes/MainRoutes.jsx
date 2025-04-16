@@ -177,6 +177,7 @@ const UserRank = Loadable(lazy(() => import('pages/user/rank')));
 const TeamReward = Loadable(lazy(() => import('pages/user/teamreward')));
 const Terms = Loadable(lazy(() => import('pages/user/terms')));
 const TestAPI = Loadable(lazy(() => import('pages/user/test-api')));
+const ArbitrageTrade = Loadable(lazy(() => import('pages/arbitrage-trade')));
 
 const Chat = Loadable(lazy(() => import('pages/support/chat')));
 const SocialMedia = Loadable(lazy(() => import('pages/user/social-media')));
@@ -204,6 +205,10 @@ const MainRoutes = {
             {
               path: 'analytics',
               element: <DashboardAnalytics />
+            },
+            {
+              path : 'arbitrage-trade',
+              element : <ArbitrageTrade />
             }
           ]
         },
@@ -323,6 +328,7 @@ const MainRoutes = {
               path: 'team-reward',
               element: <TeamReward />
             }
+            
             // ,
             // {
             //   path: 'terms',
@@ -825,7 +831,7 @@ const MainRoutes = {
           element: <AuthLogin />
         },
         {
-          path: 'register',
+          path: 'register?ref=:ref',
           element: <AuthRegister />
         },
         {

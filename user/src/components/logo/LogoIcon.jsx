@@ -1,5 +1,4 @@
 // material-ui
-import { useTheme } from '@mui/material/styles';
 import { Image } from 'react-bootstrap';
 
 /**
@@ -13,8 +12,6 @@ import { Image } from 'react-bootstrap';
 // ==============================|| LOGO ICON SVG ||============================== //
 
 export default function LogoIcon() {
-  const theme = useTheme();
-
   return (
     /**
      * if you want to use image instead of svg uncomment following, and comment out <svg> element.
@@ -49,6 +46,15 @@ export default function LogoIcon() {
     //     fill={theme.palette.primary.main}
     //   />
     // </svg>
-    <Image width={50} height={50} src={'/assets/images/favicon.png'}></Image>
+    <Image
+      style={{
+        width: "40px",
+        height: "40px",
+        objectFit: "contain"
+      }}
+      width={40}
+      height={40}
+      src={'/assets/images/favicon.png'}
+    />
   );
 }

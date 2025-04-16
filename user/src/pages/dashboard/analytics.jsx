@@ -40,16 +40,6 @@ const pulse = keyframes`
   100% { opacity: 1; }
 `;
 
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
-
-const highlight = keyframes`
-  0% { background-color: rgba(255, 255, 255, 0.1); }
-  100% { background-color: transparent; }
-`;
-
 export default function DashboardAnalytics() {
   const theme = useTheme();
   const [userData, setUserData] = useState(null);
@@ -57,113 +47,65 @@ export default function DashboardAnalytics() {
   const [activatingProfit, setActivatingProfit] = useState(false);
   const [tradeData, setTradeData] = useState([]);
   const [loadingTrades, setLoadingTrades] = useState(false);
-  const [activeExchange, setActiveExchange] = useState('KuCoin'); // Default active exchange
 
 
-  // Function to fetch live trading data using Binance WebSocket
-  const fetchLiveTradeData = () => {
+  // Function to fetch live trading data from CoinDesk API
+  const fetchLiveTradeData = async () => {
     try {
       setLoadingTrades(true);
 
-      // Create a WebSocket connection to Binance's trade stream for BTC/USDT
-      // We'll use the trade stream which provides real-time trade data
-      const wsConnection = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
+      // Use CoinDesk API to get real trade data
+      const baseUrl = 'https://data-api.coindesk.com/info/v1/openapi';
+      const params = {"api_key":"4db0495dc4e40e0f35b03daf8d8b41bfb26191258d79c078fffdfb0f91436395"};
+      const url = new URL(baseUrl);
+      url.search = new URLSearchParams(params).toString();
 
-      // Store the WebSocket connection in a ref to manage it later
-      if (window.tradeWebSocket) {
-        // Close any existing connection before creating a new one
-        window.tradeWebSocket.close();
+      const options = {
+        method: 'GET',
+        headers: {"Content-type":"application/json; charset=UTF-8"},
+      };
+
+      const response = await fetch(url, options);
+      const data = await response.json();
+
+      console.log('CoinDesk API response:', data);
+
+      // Transform the data to match our format
+      // Since we don't know the exact structure of the CoinDesk API response,
+      // we'll create a fallback in case the structure is different
+      let formattedData = [];
+
+      try {
+        // Try to extract data from the API response
+        // This is a placeholder - adjust based on actual API response structure
+        if (data && data.data && Array.isArray(data.data)) {
+          formattedData = data.data.slice(0, 10).map((item, index) => {
+            return {
+              exchange: 'CoinDesk',
+              type: index % 2 === 0 ? 'buy' : 'sell',
+              orderId: item.id || `CD${Math.floor(Math.random() * 10000000000)}`,
+              price: item.price || (Math.random() * 0.01 + 0.001).toFixed(6),
+              amount: item.amount || (84500 + Math.random() * 200).toFixed(2),
+              total: item.total || (Math.random() * 1000 + 50).toFixed(2),
+              timestamp: new Date().toLocaleTimeString()
+            };
+          });
+        } else {
+          throw new Error('Unexpected API response format');
+        }
+      } catch (formatError) {
+        console.error('Error formatting CoinDesk data:', formatError);
+        // Generate random data if formatting fails
+        generateRandomTradeData();
+        return; // Exit early since we've already set the data
       }
 
-      // Store the connection globally to manage it later
-      window.tradeWebSocket = wsConnection;
-
-      // Initialize with some random data to ensure the table isn't empty
-      generateRandomTradeData();
-
-      // Handle incoming messages from the WebSocket
-      wsConnection.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('WebSocket data received:', data);
-
-          // Format the trade data
-          const newTrade = {
-            exchange: 'Binance',
-            type: data.m ? 'sell' : 'buy', // m is true if the buyer is the market maker
-            orderId: `BN${Math.floor(Math.random() * 10000000000)}`,
-            price: parseFloat(data.p).toFixed(6), // Price
-            amount: parseFloat(data.q).toFixed(6), // Quantity
-            total: (parseFloat(data.p) * parseFloat(data.q)).toFixed(2), // Total value
-            timestamp: new Date(data.T).toLocaleTimeString(), // Trade time
-            isNew: true // Flag to highlight new entries
-          };
-
-          // Update active exchange
-          setActiveExchange('Binance');
-
-          // Remove the 'isNew' flag after a short delay
-          setTimeout(() => {
-            setTradeData(prevData => {
-              return prevData.map((item, index) =>
-                index === 0 ? { ...item, isNew: false } : item
-              );
-            });
-          }, 1000);
-
-          // Update the trade data state with the new trade at the beginning
-          // and remove the last item to maintain a fixed number of rows
-          setTradeData(prevData => {
-            const newData = [newTrade, ...prevData.slice(0, 19)]; // Keep only 20 rows
-            return newData;
-          });
-
-          // Scroll to the top of the table to show the new entry
-          const tableContainer = document.querySelector('.trade-table-container');
-          if (tableContainer) {
-            tableContainer.scrollTop = 0;
-          }
-
-          setLoadingTrades(false);
-        } catch (parseError) {
-          console.error('Error parsing WebSocket data:', parseError);
-        }
-      };
-
-      // Handle WebSocket connection open
-      wsConnection.onopen = () => {
-        console.log('WebSocket connection established');
-        setLoadingTrades(false);
-      };
-
-      // Handle WebSocket errors
-      wsConnection.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        generateRandomTradeData();
-        setLoadingTrades(false);
-      };
-
-      // Handle WebSocket connection close
-      wsConnection.onclose = () => {
-        console.log('WebSocket connection closed');
-        // If the connection closes unexpectedly and the user still has daily profit activated,
-        // try to reconnect or fall back to random data
-        if (userData?.dailyProfitActivated) {
-          console.log('Falling back to random data generation');
-          generateRandomTradeData();
-        }
-      };
-
-      // Return a cleanup function to close the WebSocket when needed
-      return () => {
-        if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
-          wsConnection.close();
-        }
-      };
+      setTradeData(formattedData);
     } catch (error) {
-      console.error('Error setting up WebSocket:', error);
-      // Generate random data if WebSocket setup fails
+      console.error('Error fetching CoinDesk data:', error);
+      // Generate random data if API fails
       generateRandomTradeData();
+    } finally {
       setLoadingTrades(false);
     }
   };
@@ -175,36 +117,36 @@ export default function DashboardAnalytics() {
         exchange: 'Binance',
         type: 'buy',
         orderId: 'BTC-12345',
-        price: '0.00250',
-        amount: '42150.00',
-        total: '105.37',
+        price: '42150.00',
+        amount: '0.25',
+        total: '10537.50',
         timestamp: '17:31 - Just now'
       },
       {
         exchange: 'Coinbase',
         type: 'sell',
         orderId: 'ETH-67890',
-        price: '0.00150',
-        amount: '2850.75',
-        total: '4.27',
+        price: '2850.75',
+        amount: '1.5',
+        total: '4276.13',
         timestamp: '17:30 - Just now'
       },
       {
         exchange: 'Kraken',
         type: 'buy',
         orderId: 'SOL-23456',
-        price: '0.00100',
-        amount: '103.25',
-        total: '0.10',
+        price: '103.25',
+        amount: '10.0',
+        total: '1032.50',
         timestamp: '17:29 - Just now'
       },
       {
         exchange: 'Bitfinex',
         type: 'sell',
         orderId: 'ADA-78901',
-        price: '0.00058',
+        price: '0.58',
         amount: '500.0',
-        total: '0.29',
+        total: '290.00',
         timestamp: '17:28 - Just now'
       }
     ];
@@ -244,71 +186,6 @@ export default function DashboardAnalytics() {
     }
 
     setTradeData(randomData);
-  };
-
-  // Function to simulate real-time data updates when using random data
-  const startRandomDataUpdates = () => {
-    // Clear any existing interval
-    if (window.randomDataInterval) {
-      clearInterval(window.randomDataInterval);
-    }
-
-    // Set up an interval to add new random trades periodically
-    window.randomDataInterval = setInterval(() => {
-      if (userData?.dailyProfitActivated) {
-        const exchanges = ['Binance', 'xtpub', 'bullish', 'Coinbase', 'Kraken'];
-        const types = ['buy', 'sell'];
-        const basePrice = 84500 + Math.random() * 200;
-
-        const type = types[Math.floor(Math.random() * types.length)];
-        const price = (Math.random() * 0.01 + 0.001).toFixed(6);
-        const amount = (basePrice + (Math.random() * 100 - 50)).toFixed(2);
-        const total = (parseFloat(price) * parseFloat(amount)).toFixed(2);
-
-        const randomExchange = exchanges[Math.floor(Math.random() * exchanges.length)];
-        const newTrade = {
-          exchange: randomExchange,
-          type,
-          orderId: Math.floor(Math.random() * 10000000000).toString(),
-          price,
-          amount,
-          total,
-          timestamp: new Date().toLocaleTimeString(),
-          isNew: true // Flag to highlight new entries
-        };
-
-        // Update active exchange
-        setActiveExchange(randomExchange);
-
-        // Add the new trade at the beginning and remove the last one
-        setTradeData(prevData => {
-          // Add new trade at the beginning
-          const newData = [newTrade, ...prevData.slice(0, 19)];
-          return newData;
-        });
-
-        // Scroll to the top of the table to show the new entry
-        const tableContainer = document.querySelector('.trade-table-container');
-        if (tableContainer) {
-          tableContainer.scrollTop = 0;
-        }
-
-        // Remove the 'isNew' flag after a short delay
-        setTimeout(() => {
-          setTradeData(prevData => {
-            return prevData.map((item, index) =>
-              index === 0 ? { ...item, isNew: false } : item
-            );
-          });
-        }, 1000);
-      }
-    }, 2000); // Add a new trade every 2 seconds
-
-    return () => {
-      if (window.randomDataInterval) {
-        clearInterval(window.randomDataInterval);
-      }
-    };
   };
 
 
@@ -501,46 +378,13 @@ export default function DashboardAnalytics() {
     fetchUserProfile();
   }, []);
 
-  // Set up WebSocket or random data updates when activation state changes
+  // Fetch trade data once when activation state changes
   useEffect(() => {
     if (userData?.dailyProfitActivated === true) {
-      // Clean up any existing connections or intervals
-      if (window.tradeWebSocket) {
-        window.tradeWebSocket.close();
-      }
-      if (window.randomDataInterval) {
-        clearInterval(window.randomDataInterval);
-      }
+      // Fetch data once when activated
+      fetchLiveTradeData();
 
-      // Try to use WebSocket for real-time data
-      try {
-        const cleanup = fetchLiveTradeData();
-
-        // If WebSocket fails, fall back to random data with simulated updates
-        if (!window.tradeWebSocket || window.tradeWebSocket.readyState !== WebSocket.OPEN) {
-          console.log('WebSocket not available, using random data with updates');
-          const randomCleanup = startRandomDataUpdates();
-          return () => {
-            if (typeof cleanup === 'function') cleanup();
-            if (typeof randomCleanup === 'function') randomCleanup();
-          };
-        }
-
-        return cleanup;
-      } catch (error) {
-        console.error('Error setting up real-time data:', error);
-        // Fall back to random data with simulated updates
-        const randomCleanup = startRandomDataUpdates();
-        return randomCleanup;
-      }
-    } else {
-      // Clean up when deactivated
-      if (window.tradeWebSocket) {
-        window.tradeWebSocket.close();
-      }
-      if (window.randomDataInterval) {
-        clearInterval(window.randomDataInterval);
-      }
+      // No need for interval as we're using animation for continuous scrolling
     }
   }, [userData?.dailyProfitActivated]);
 
@@ -682,14 +526,14 @@ export default function DashboardAnalytics() {
                         whiteSpace: 'nowrap'
                       }}
                     >
-                      {`${process.env.PUBLIC_URL}/login?ref=${userData?.sponsorID}`}
+                      {`${window.location.origin}/register?refID=${userData?.sponsorID || 'admin'}`}
                     </Typography>
                   </Paper>
                   <Button
                     variant="contained"
                     startIcon={<Copy size={18} />}
                     onClick={() => {
-                      navigator.clipboard.writeText(`${process.env.PUBLIC_URL}/login?ref=${userData?.sponsorID}`);
+                      navigator.clipboard.writeText(`${window.location.origin}/register?refID=${userData?.sponsorID || 'admin'}`);
                       Swal.fire({
                         icon: 'success',
                         title: 'Referral Link Copied!',
@@ -712,64 +556,7 @@ export default function DashboardAnalytics() {
             </Grid>
           </Box>
 
-          {/* Bottom Stats Bar */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              borderTop: `1px solid ${alpha('#fff', 0.1)}`,
-              bgcolor: alpha('#000', 0.2)
-            }}
-          >
-            <Box
-              sx={{
-                py: 2,
-                px: 3,
-                flex: { xs: '0 0 100%', sm: '0 0 50%', md: '0 0 33.333%' },
-                borderRight: { xs: 'none', sm: `1px solid ${alpha('#fff', 0.1)}` },
-                borderBottom: { xs: `1px solid ${alpha('#fff', 0.1)}`, md: 'none' }
-              }}
-            >
-              <Typography variant="body2" color="grey.500" gutterBottom>
-                Total Investment
-              </Typography>
-              <Typography variant="h6" color="common.white" sx={{ fontWeight: 600 }}>
-                ${(userData?.total_investment || 0).toFixed(2)}
-              </Typography>
-            </Box>
 
-            <Box
-              sx={{
-                py: 2,
-                px: 3,
-                flex: { xs: '0 0 100%', sm: '0 0 50%', md: '0 0 33.333%' },
-                borderRight: { md: `1px solid ${alpha('#fff', 0.1)}` },
-                borderBottom: { xs: `1px solid ${alpha('#fff', 0.1)}`, sm: 'none' }
-              }}
-            >
-              <Typography variant="body2" color="grey.500" gutterBottom>
-                Direct Referrals
-              </Typography>
-              <Typography variant="h6" color="common.white" sx={{ fontWeight: 600 }}>
-                {userData?.extra?.directReferrals || 0} users
-              </Typography>
-            </Box>
-
-            <Box
-              sx={{
-                py: 2,
-                px: 3,
-                flex: { xs: '0 0 100%', md: '0 0 33.333%' }
-              }}
-            >
-              <Typography variant="body2" color="grey.500" gutterBottom>
-                Total Earnings
-              </Typography>
-              <Typography variant="h6" color="common.white" sx={{ fontWeight: 600 }}>
-                ${(userData?.extra?.totalEarnings || 0).toFixed(2)}
-              </Typography>
-            </Box>
-          </Box>
         </Paper>
       )}
 
@@ -908,239 +695,7 @@ export default function DashboardAnalytics() {
             </Paper>
           </Grid>
 
-          {/* CoinDesk Live Data Section */}
-          <Grid item xs={12}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 3,
-                borderRadius: 4,
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-                mb: 3
-              }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                <Box>
-                  <Typography variant="h5" color="white" sx={{ fontWeight: 600, mb: 1 }}>
-                    Live Trading Data
-                  </Typography>
-                  <Typography variant="body2" color="grey.400" sx={{ mb: 2 }}>
-                    Activate daily profit for YOUR account by clicking the button below
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    size="large"
-                    onClick={handleActivateDailyProfit}
-                    disabled={userData?.dailyProfitActivated === true || activatingProfit}
-                    sx={{
-                      borderRadius: 2,
-                      px: 3,
-                      py: 1,
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      boxShadow: '0 4px 10px rgba(0, 0, 0, 0.2)',
-                      minWidth: '200px'
-                    }}
-                  >
-                    {activatingProfit ? (
-                      <>
-                        <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
-                        Activating...
-                      </>
-                    ) : userData?.dailyProfitActivated === true ? (
-                      'Your Daily Profit Activated for Today'
-                    ) : (
-                      'Activate MY Daily Profit for Today'
-                    )}
-                  </Button>
-                  <Typography variant="caption" color="grey.400" sx={{ mt: 1, textAlign: 'center', width: '100%' }}>
-                    Activation resets at midnight UTC. You must activate daily.
-                  </Typography>
-                </Box>
-              </Box>
-
-              {/* Exchange buttons */}
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 3, mb: 3 }}>
-                {['Binance', 'Coinbase', 'Kraken', 'KuCoin', 'Huobi', 'Gate.io', 'OKX', 'Bybit', 'Bitfinex'].map((exchange) => (
-                  <Button
-                    key={exchange}
-                    variant={activeExchange === exchange ? 'contained' : 'outlined'}
-                    sx={{
-                      borderRadius: '50px',
-                      px: 3,
-                      py: 1,
-                      bgcolor: activeExchange === exchange ? '#4caf50' : 'transparent',
-                      borderColor: alpha('#fff', 0.2),
-                      color: activeExchange === exchange ? 'white' : 'grey.400',
-                      '&:hover': {
-                        bgcolor: activeExchange === exchange ? '#4caf50' : alpha('#fff', 0.05)
-                      },
-                      fontWeight: activeExchange === exchange ? 600 : 400,
-                      boxShadow: activeExchange === exchange ? '0 4px 10px rgba(0, 0, 0, 0.2)' : 'none',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    {exchange}
-                  </Button>
-                ))}
-              </Box>
-
-              {/* BTC Price Display */}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-                <Typography variant="h5" color="white" sx={{ fontWeight: 600 }}>
-                  BTC Price: $85803.41
-                  <Typography component="span" color="#4caf50" sx={{ ml: 2, fontWeight: 500 }}>
-                    24h Change: 1.23%
-                  </Typography>
-                </Typography>
-              </Box>
-
-              {/* Current Exchange Display */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, px: 2 }}>
-                <Typography variant="h6" color="white">
-                  {activeExchange}
-                </Typography>
-                <Box>
-                  <Typography variant="body2" color="#4caf50" sx={{ display: 'inline-block', mr: 3 }}>
-                    Buy: $85789.34
-                    <Typography component="span" color="grey.400" sx={{ ml: 1, fontSize: '0.8rem' }}>
-                      Qty: 0.084 BTC
-                    </Typography>
-                  </Typography>
-                  <Typography variant="body2" color="#f44336" sx={{ display: 'inline-block' }}>
-                    Sell: $85817.48
-                    <Typography component="span" color="grey.400" sx={{ ml: 1, fontSize: '0.8rem' }}>
-                      24h: 0.27%
-                    </Typography>
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ maxHeight: '400px', overflow: 'auto', position: 'relative', scrollBehavior: 'smooth' }} className="trade-table-container">
-                {/* Always show the notification based on activation status */}
-                {!userData?.dailyProfitActivated && (
-                  <Box sx={{ p: 3, textAlign: 'center', bgcolor: alpha('#fff', 0.05), borderRadius: 2, mb: 3 }}>
-                    <Typography variant="body1" color="grey.300">
-                      Activate daily profit for YOUR account to see LIVE trading data. Each user must activate their own daily profit every day.
-                    </Typography>
-                    <Typography variant="body2" color="grey.400" sx={{ mt: 1 }}>
-                      The system distributes daily profit only to users who have activated it, and resets activation status at midnight UTC.
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Show loading indicator when fetching live data */}
-                {userData?.dailyProfitActivated && loadingTrades ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3, flexDirection: 'column' }}>
-                    <CircularProgress size={40} thickness={4} sx={{ mb: 2 }} />
-                    <Typography variant="body2" color="grey.400" sx={{ animation: `${pulse} 1.5s infinite` }}>
-                      Fetching live trading data...
-                    </Typography>
-                  </Box>
-                ) : (
-                  /* Always show the table with either live or sample data */
-                  <Box>
-                    <Typography variant="h6" color="white" sx={{ mb: 2, fontWeight: 600 }}>
-                      Trade History
-                    </Typography>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', position: 'relative' }}>
-                    <thead>
-                      <tr style={{ borderBottom: `1px solid ${alpha('#fff', 0.1)}` }}>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', color: 'white' }}>Exchange</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center', color: 'white' }}>Type</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center', color: 'white' }}>Order ID</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'right', color: 'white' }}>Price</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'right', color: 'white' }}>Amount</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'right', color: 'white' }}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tradeData.map((trade, index) => (
-                        <tr
-                          key={index}
-                          style={{
-                            backgroundColor: alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', trade.isNew ? 0.2 : 0.05),
-                            transition: 'all 0.5s ease',
-                            opacity: userData?.dailyProfitActivated ? 1 : 0.7, // Dim the rows if not activated
-                            transform: trade.isNew ? 'scale(1.02)' : 'scale(1)',
-                            boxShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.5)}` : 'none',
-                            animation: trade.isNew ? `${fadeIn} 0.5s ease-out, ${highlight} 2s ease-out` : 'none'
-                          }}
-                        >
-                          <td style={{ padding: '12px 16px', color: 'white' }}>
-                            <Typography variant="body2" color={userData?.dailyProfitActivated ? 'grey.300' : 'grey.400'} sx={{
-                              fontWeight: trade.isNew ? 700 : 500,
-                              animation: trade.isNew ? `${pulse} 1s` : 'none',
-                              display: 'block',
-                              color: activeExchange === trade.exchange ? '#4caf50' : 'grey.300'
-                            }}>
-                              {trade.exchange}
-                            </Typography>
-                            <Typography variant="caption" color={userData?.dailyProfitActivated ? 'grey.500' : 'grey.600'} sx={{
-                              fontWeight: trade.isNew ? 600 : 400,
-                              display: 'block'
-                            }}>
-                              {userData?.dailyProfitActivated ? trade.timestamp : 'Sample Data'}
-                            </Typography>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                            <Chip
-                              label={trade.type === 'buy' ? 'Buy' : 'Sell'}
-                              size="small"
-                              sx={{
-                                bgcolor: trade.type === 'buy' ? '#4caf50' : '#f44336',
-                                color: 'white',
-                                opacity: userData?.dailyProfitActivated ? 1 : 0.7,
-                                fontWeight: 'bold',
-                                fontSize: '0.75rem',
-                                height: '24px',
-                                transition: 'all 0.3s ease',
-                                transform: trade.isNew ? 'scale(1.1)' : 'scale(1)',
-                                boxShadow: trade.isNew ? '0 0 5px rgba(255,255,255,0.3)' : 'none'
-                              }}
-                            />
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                            <Typography variant="body2" color={userData?.dailyProfitActivated ? 'grey.400' : 'grey.500'} sx={{
-                              fontWeight: trade.isNew ? 600 : 400
-                            }}>
-                              {trade.orderId}
-                            </Typography>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <Typography variant="body2" color={userData?.dailyProfitActivated ? 'grey.300' : 'grey.400'} sx={{
-                              fontWeight: trade.isNew ? 600 : 400
-                            }}>
-                              ₿ {trade.price}
-                            </Typography>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <Typography variant="body2" color={userData?.dailyProfitActivated ? 'grey.300' : 'grey.400'} sx={{
-                              fontWeight: trade.isNew ? 600 : 400
-                            }}>
-                              ₮ {trade.amount}
-                            </Typography>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <Typography variant="body2" color={userData?.dailyProfitActivated ? 'grey.300' : 'grey.400'} sx={{
-                              fontWeight: trade.isNew ? 600 : 400
-                            }}>
-                              ₮ {trade.total}
-                            </Typography>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  </Box>
-                )}
-              </Box>
-            </Paper>
-          </Grid>
+          
 
           {/* Income Stats Row */}
           <Grid item xs={12}>

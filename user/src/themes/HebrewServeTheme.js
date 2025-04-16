@@ -237,6 +237,54 @@ const HebrewServeTheme = createTheme({
         }
       }
     },
+    MuiListItemText: {
+      styleOverrides: {
+        primary: {
+          '& .MuiTypography-root': {
+            color: '#ffffff' // White text for sidebar items
+          }
+        }
+      }
+    },
+    MuiListItemIcon: {
+      styleOverrides: {
+        root: {
+          color: '#ffffff' // White color for sidebar icons
+        }
+      }
+    },
+    MuiTypography: {
+      styleOverrides: {
+        h5: {
+          '&.MuiTypography-root': {
+            color: '#ffffff' // White color for sidebar group titles
+          }
+        }
+      }
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: '#1a237e', // Deep indigo background for drawer
+          backgroundImage: 'none'
+        }
+      }
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: {
+          '&.Mui-selected': {
+            backgroundColor: 'rgba(255, 255, 255, 0.12)', // Lighter background for selected items
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.2)'
+            }
+          },
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.08)'
+          }
+        }
+      }
+    },
     MuiCard: {
       styleOverrides: {
         root: {

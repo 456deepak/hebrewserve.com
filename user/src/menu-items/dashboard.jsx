@@ -26,23 +26,31 @@ const loadingMenu = {
       type: 'item',
       icon: icons.loading,
       url: '/dashboard/analytics',
-      // children: [
-      //   {
-      //     id: 'default1',
-      //     title: 'loading',
-      //     type: 'item',
-      //     url: '/dashboard/default',
-      //     breadcrumbs: false
-      //   },
-      //   {
-      //     id: 'analytics1',
-      //     title: 'loading',
-      //     type: 'item',
-      //     url: '/dashboard/analytics',
-      //     breadcrumbs: false
-      //   }
-      // ]
+      children: [
+        {
+          id: 'default1',
+          title: 'loading',
+          type: 'item',
+          url: '/dashboard/default',
+          breadcrumbs: false
+        },
+        {
+          id: 'analytics1',
+          title: 'loading',
+          type: 'item',
+          url: '/dashboard/analytics',
+          breadcrumbs: false
+        }
+      ]
+    },
+    {
+      id: 'arbitrage-trade1',
+      title: 'Arbitrage Trade',
+      type: 'item',
+      url: '/dashboard/arbitrage-trade',
+      breadcrumbs: false
     }
+    
   ]
 };
 
