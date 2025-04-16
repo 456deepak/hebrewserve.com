@@ -1,6 +1,6 @@
 import { useTheme, alpha } from '@mui/material/styles';
 import { keyframes } from '@emotion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'utils/axios';
 import Swal from 'sweetalert2';
 
@@ -31,6 +31,43 @@ const numberChange = keyframes`
   100% { opacity: 1; transform: translateY(0); }
 `;
 
+const fadeInUp = keyframes`
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+`;
+
+const fadeInDown = keyframes`
+  0% { opacity: 0; transform: translateY(-20px); }
+  100% { opacity: 1; transform: translateY(0); }
+`;
+
+const glowEffect = keyframes`
+  0% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.8); }
+  100% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.5); }
+`;
+
+const slideIn = keyframes`
+  0% { transform: translateX(-20px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+`;
+
+const slideOut = keyframes`
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(20px); opacity: 0; }
+`;
+
+const flashHighlight = keyframes`
+  0% { background-color: rgba(255, 255, 255, 0); }
+  30% { background-color: rgba(255, 255, 255, 0.2); }
+  100% { background-color: rgba(255, 255, 255, 0); }
+`;
+
+const typewriter = keyframes`
+  from { width: 0 }
+  to { width: 100% }
+`;
+
 // ==============================|| ARBITRAGE TRADE PAGE ||============================== //
 
 const ArbitrageTrade = () => {
@@ -42,6 +79,11 @@ const ArbitrageTrade = () => {
   const [loadingTrades, setLoadingTrades] = useState(false);
   const [hasInvestment, setHasInvestment] = useState(false);
   const [refreshData, setRefreshData] = useState(false);
+  const [newRowAdded, setNewRowAdded] = useState(false);
+  const [removedRowId, setRemovedRowId] = useState(null);
+
+  // WebSocket reference
+  const wsRef = useRef(null);
 
   // Metrics for display
   const [btcPrice, setBtcPrice] = useState(84500);
@@ -472,10 +514,96 @@ const ArbitrageTrade = () => {
     }
   }, [refreshMetrics]);
 
+  // WebSocket connection setup
+  useEffect(() => {
+    // Only connect WebSocket if user has investments and has activated daily profit
+    if (userData && userData.total_investment > 0 && userData.dailyProfitActivated) {
+      // Create WebSocket connection
+      const wsUrl = 'wss://stream.binance.com:9443/ws/btcusdt@trade';
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      // Connection opened
+      ws.onopen = () => {
+        console.log('WebSocket connection established');
+      };
+
+      // Listen for messages
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        // Process the trade data
+        processWebSocketData(data);
+      };
+
+      // Connection closed
+      ws.onclose = () => {
+        console.log('WebSocket connection closed');
+      };
+
+      // Connection error
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        // Fall back to random data generation if WebSocket fails
+        generateRandomTradeData();
+      };
+
+      // Clean up WebSocket on unmount
+      return () => {
+        if (wsRef.current) {
+          wsRef.current.close();
+        }
+      };
+    } else {
+      // Start updating metrics immediately if not using WebSocket
+      updateMetrics();
+    }
+  }, [userData?.dailyProfitActivated, userData?.total_investment]);
+
+  // Process WebSocket data
+  const processWebSocketData = (data) => {
+    // Update BTC price from WebSocket data
+    if (data.p) {
+      setBtcPrice(parseFloat(data.p));
+    }
+
+    // Create a new trade row from WebSocket data
+    const newTrade = {
+      exchange: 'Binance',
+      type: parseFloat(data.q) > 0.1 ? 'buy' : 'sell', // Determine type based on quantity
+      orderId: data.t.toString(),
+      price: parseFloat(data.p).toFixed(2),
+      amount: parseFloat(data.q).toFixed(6),
+      total: (parseFloat(data.p) * parseFloat(data.q)).toFixed(2),
+      timestamp: new Date().toLocaleTimeString(),
+      id: `ws-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      animationDelay: '0s',
+      isNew: true // Flag to animate new rows
+    };
+
+    // Update trade data with the new row at the top
+    setTradeData(prevData => {
+      // Mark the row that will be removed
+      if (prevData.length >= 10) {
+        setRemovedRowId(prevData[prevData.length - 1].id);
+      }
+
+      // Add new row at the beginning and keep only 10 rows
+      const newData = [newTrade, ...prevData.slice(0, 9)];
+
+      // Trigger animation for new row
+      setNewRowAdded(true);
+      setTimeout(() => setNewRowAdded(false), 500);
+
+      return newData;
+    });
+  };
+
   // Start metrics updates when component mounts
   useEffect(() => {
-    // Start updating metrics immediately
-    updateMetrics();
+    // Start updating metrics immediately if not using WebSocket
+    if (!wsRef.current) {
+      updateMetrics();
+    }
   }, []);
 
   return (
@@ -986,14 +1114,41 @@ const ArbitrageTrade = () => {
                               style={{
                                 backgroundColor: alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.05),
                                 transition: 'all 0.3s ease',
-                                animation: `${numberChange} 0.5s ease-out`
+                                animation: `${trade.isNew ? fadeInDown : numberChange} 0.5s ease-out, ${trade.id === removedRowId ? slideOut : 'none'} 0.5s ease-out, ${newRowAdded && index === 0 ? flashHighlight : 'none'} 1s ease-out`,
+                                animationDelay: trade.animationDelay || `${index * 0.05}s`,
+                                opacity: trade.id === removedRowId ? 0 : 1,
+                                animationFillMode: 'forwards',
+                                position: 'relative',
+                                zIndex: trade.isNew ? 2 : 1
                               }}
                             >
                               <td style={{ padding: '12px 16px', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                <Typography variant="body2" color="grey.300" sx={{ fontWeight: 500 }}>
+                                <Typography variant="body2" color="grey.300" sx={{
+                                  fontWeight: 500,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  animation: trade.isNew ? `${slideIn} 0.5s ease-out` : 'none',
+                                  '&::before': {
+                                    content: '""',
+                                    display: 'inline-block',
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    backgroundColor: trade.type === 'buy' ? '#4caf50' : '#f44336',
+                                    marginRight: '8px',
+                                    animation: `${pulse} 1.5s infinite`
+                                  }
+                                }}>
                                   {trade.exchange}
                                 </Typography>
-                                <Typography variant="caption" color="grey.500">
+                                <Typography variant="caption" color="grey.500" sx={{
+                                  pl: 2,
+                                  animation: trade.isNew ? `${fadeInUp} 0.7s ease-out` : 'none',
+                                  display: 'block',
+                                  opacity: trade.isNew ? 0 : 1,
+                                  animationFillMode: 'forwards',
+                                  animationDelay: '0.2s'
+                                }}>
                                   {trade.timestamp}
                                 </Typography>
                               </td>
@@ -1006,27 +1161,66 @@ const ArbitrageTrade = () => {
                                     color: 'white',
                                     fontWeight: 'bold',
                                     fontSize: '0.75rem',
-                                    height: '24px'
+                                    height: '24px',
+                                    transition: 'all 0.3s ease',
+                                    animation: trade.isNew ? `${glowEffect} 1.5s ease-out` : 'none',
+                                    boxShadow: `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.5)}`,
+                                    '&:hover': {
+                                      transform: 'scale(1.05)',
+                                      boxShadow: `0 0 12px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}`
+                                    }
                                   }}
                                 />
                               </td>
                               <td style={{ padding: '12px 16px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                <Typography variant="body2" color="grey.400" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <Typography variant="body2" color="grey.400" sx={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  fontFamily: 'monospace',
+                                  letterSpacing: '0.5px',
+                                  animation: trade.isNew ? `${typewriter} 0.5s steps(40, end)` : 'none',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  borderRight: trade.isNew ? '2px solid transparent' : 'none',
+                                  width: trade.isNew ? '0' : '100%',
+                                  animationFillMode: 'forwards'
+                                }}>
                                   {trade.orderId}
                                 </Typography>
                               </td>
                               <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                <Typography variant="body2" color="grey.300">
+                                <Typography variant="body2" color={trade.type === 'buy' ? 'success.light' : 'error.light'} sx={{
+                                  fontWeight: 600,
+                                  animation: trade.isNew ? `${fadeInDown} 0.5s ease-out` : 'none',
+                                  opacity: trade.isNew ? 0 : 1,
+                                  animationFillMode: 'forwards',
+                                  textShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}` : 'none'
+                                }}>
                                   ₿ {trade.price}
                                 </Typography>
                               </td>
                               <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                <Typography variant="body2" color="grey.300">
+                                <Typography variant="body2" color={trade.type === 'buy' ? 'success.light' : 'error.light'} sx={{
+                                  fontWeight: 600,
+                                  animation: trade.isNew ? `${fadeInDown} 0.5s ease-out` : 'none',
+                                  opacity: trade.isNew ? 0 : 1,
+                                  animationFillMode: 'forwards',
+                                  animationDelay: '0.1s',
+                                  textShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}` : 'none'
+                                }}>
                                   ₮ {trade.amount}
                                 </Typography>
                               </td>
                               <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                <Typography variant="body2" color="grey.300">
+                                <Typography variant="body2" color={trade.type === 'buy' ? 'success.light' : 'error.light'} sx={{
+                                  fontWeight: 700,
+                                  animation: trade.isNew ? `${fadeInDown} 0.5s ease-out` : 'none',
+                                  opacity: trade.isNew ? 0 : 1,
+                                  animationFillMode: 'forwards',
+                                  animationDelay: '0.2s',
+                                  fontSize: '0.9rem',
+                                  textShadow: trade.isNew ? `0 0 8px ${alpha(trade.type === 'buy' ? '#4caf50' : '#f44336', 0.7)}` : 'none'
+                                }}>
                                   ₮ {trade.total}
                                 </Typography>
                               </td>

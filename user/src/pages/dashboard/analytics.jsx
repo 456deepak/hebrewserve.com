@@ -187,7 +187,8 @@ export default function DashboardAnalytics() {
 
     setTradeData(randomData);
   };
-
+   
+  console.log(userData);
 
 
   // Function to handle daily profit activation
@@ -318,9 +319,6 @@ export default function DashboardAnalytics() {
 
         if (response.data?.status) {
           const userData = response.data.result;
-          if (!userData.extra) {
-            userData.extra = {};
-          }
 
           // Get user ID for user-specific localStorage items
           const userId = userData?._id;
@@ -353,10 +351,7 @@ export default function DashboardAnalytics() {
             }
           }
 
-          // Ensure the extra object exists
-          if (!userData.extra) {
-            userData.extra = {};
-          }
+          // Set user data
 
           setUserData(userData);
 
@@ -383,7 +378,7 @@ export default function DashboardAnalytics() {
     if (userData?.dailyProfitActivated === true) {
       // Fetch data once when activated
       fetchLiveTradeData();
-
+           
       // No need for interval as we're using animation for continuous scrolling
     }
   }, [userData?.dailyProfitActivated]);
@@ -674,7 +669,7 @@ export default function DashboardAnalytics() {
                     Total Earnings
                   </Typography>
                   <Typography variant="h3" color="common.white" sx={{ fontWeight: 700 }}>
-                    ${(userData?.extra?.totalEarnings || 0).toFixed(2)}
+                    ${(userData?.total_earnings || 0).toFixed(2)}
                   </Typography>
                 </Box>
                 <Avatar
@@ -695,7 +690,7 @@ export default function DashboardAnalytics() {
             </Paper>
           </Grid>
 
-          
+
 
           {/* Income Stats Row */}
           <Grid item xs={12}>
@@ -730,7 +725,7 @@ export default function DashboardAnalytics() {
                 </Typography>
               </Box>
               <Typography variant="h4" color="white" sx={{ fontWeight: 700, mb: 1 }}>
-                ${(userData?.extra?.dailyProfit || 0).toFixed(2)}
+                ${(userData?.daily_profit || 0).toFixed(2)}
               </Typography>
               <Typography variant="body2" color="grey.300">
                 2.5% daily profit from investments
@@ -764,7 +759,7 @@ export default function DashboardAnalytics() {
                 </Typography>
               </Box>
               <Typography variant="h4" color="white" sx={{ fontWeight: 700, mb: 1 }}>
-                ${(userData?.extra?.firstDepositBonus || 0).toFixed(2)}
+                ${(userData?.first_deposit_bonus || 0).toFixed(2)}
               </Typography>
               <Typography variant="body2" color="grey.300">
                 Bonus from your first investment
@@ -798,7 +793,7 @@ export default function DashboardAnalytics() {
                 </Typography>
               </Box>
               <Typography variant="h4" color="white" sx={{ fontWeight: 700, mb: 1 }}>
-                ${(userData?.extra?.referralBonus || 0).toFixed(2)}
+                ${(userData?.referral_bonus || 0).toFixed(2)}
               </Typography>
               <Typography variant="body2" color="grey.300">
                 Earnings from direct referrals
@@ -832,7 +827,7 @@ export default function DashboardAnalytics() {
                 </Typography>
               </Box>
               <Typography variant="h4" color="white" sx={{ fontWeight: 700, mb: 1 }}>
-                ${(userData?.extra?.teamCommission || 0).toFixed(2)}
+                ${(userData?.team_commission || 0).toFixed(2)}
               </Typography>
               <Typography variant="body2" color="grey.300">
                 Earnings from your team (3 levels)
@@ -859,7 +854,7 @@ export default function DashboardAnalytics() {
                   Direct Referrals
                 </Typography>
                 <Typography variant="h4" color="white" sx={{ fontWeight: 600 }}>
-                  {userData?.extra?.directReferrals || 0}
+                  {userData?.direct_referrals || 0}
                 </Typography>
                 <Typography variant="body2" color="grey.400" sx={{ mt: 1 }}>
                   Number of users you've referred
@@ -896,7 +891,7 @@ export default function DashboardAnalytics() {
                   Active Member Rewards
                 </Typography>
                 <Typography variant="h4" color="white" sx={{ fontWeight: 600 }}>
-                  ${(userData?.extra?.activeMemberReward || 0).toFixed(2)}
+                  ${(userData?.active_member_reward || 0).toFixed(2)}
                 </Typography>
                 <Typography variant="body2" color="grey.400" sx={{ mt: 1 }}>
                   Rewards based on team size
