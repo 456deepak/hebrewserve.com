@@ -321,7 +321,7 @@ export default function DashboardAnalytics() {
         const response = await axios.get('/user/dashboard-data');
 
         // If no response, try a fallback approach
-        if (!response || !response.data) {
+        if (1) {
           console.warn('No response data received, trying alternative endpoint');
           const fallbackResponse = await fetch('https://server.hebrewserve.com/api/v1/user/dashboard-data', {
             method: 'GET',
@@ -331,9 +331,16 @@ export default function DashboardAnalytics() {
             }
           });
 
+
           if (fallbackResponse.ok) {
             const fallbackData = await fallbackResponse.json();
             console.log('Fallback data received:', fallbackData);
+            // Extract the user data from the result property
+            if (fallbackData.status && fallbackData.result) {
+              setUserData(fallbackData.result);
+              setLoading(false);
+              return;
+            }
             return fallbackData;
           } else {
             console.error('Fallback request failed:', fallbackResponse.status);
@@ -346,11 +353,11 @@ export default function DashboardAnalytics() {
             throw new Error('All API requests failed');
           }
         }
-        console.log('API response:', response);
+
 
         if (response.data?.status) {
-          // The data is in response.data.data, not response.data.result
-          const userData = response.data.data;
+          // The data could be in either response.data.data or response.data.result
+          const userData = response.data.data || response.data.result;
           console.log('Dashboard data received:', userData);
 
           // Check if we received valid user data
@@ -475,7 +482,7 @@ export default function DashboardAnalytics() {
         setLoading(false);
       }
     };
-
+    console.log('Fetching user profile...');
     fetchUserProfile();
   }, []);
 
