@@ -294,4 +294,88 @@ module.exports = {
         }
     },
 
+    updateLastInvestmentAmounts: async (req, res) => {
+        let responseData = {};
+        try {
+            // Import the Investment model
+            const Investment = require('../../models/investment.model');
+            const User = require('../../models/user.model');
+
+            console.log('Starting update of last_investment_amount for all users...');
+
+            // Get all users
+            const users = await User.find({});
+            console.log(`Found ${users.length} users to process`);
+
+            let updatedCount = 0;
+
+            // Process each user
+            for (const user of users) {
+                // Find the latest investment for this user
+                const latestInvestment = await Investment.findOne(
+                    {
+                        user_id: user._id,
+                        status: { $in: ['active', 1, 2] }, // Include active investments
+                        package_type: 'trading' // Only consider trading packages
+                    }
+                ).sort({ created_at: -1 }); // Sort by creation date, newest first
+
+                if (latestInvestment) {
+                    console.log(`User ${user.username || user._id}: Found latest investment of $${latestInvestment.amount}`);
+
+                    // Update the user's last_investment_amount
+                    await User.updateOne(
+                        { _id: user._id },
+                        { $set: { last_investment_amount: latestInvestment.amount } }
+                    );
+
+                    updatedCount++;
+                } else {
+                    console.log(`User ${user.username || user._id}: No investments found`);
+                }
+            }
+
+            responseData.msg = `Updated last_investment_amount for ${updatedCount} users`;
+            return responseHelper.success(res, responseData);
+
+        } catch (error) {
+            log.error('Error updating last_investment_amount:', error);
+            responseData.msg = 'Failed to update last investment amounts';
+            return responseHelper.error(res, responseData);
+        }
+    },
+
+    searchUsers: async (req, res) => {
+        let responseData = {};
+        try {
+            const { query } = req.query;
+
+            if (!query || query.length < 2) {
+                responseData.msg = 'Search query must be at least 2 characters';
+                return responseHelper.error(res, responseData);
+            }
+
+            // Search for users by username, name, or email
+            const users = await userDbHandler.getByQuery(
+                {
+                    $or: [
+                        { username: { $regex: query, $options: 'i' } },
+                        { name: { $regex: query, $options: 'i' } },
+                        { email: { $regex: query, $options: 'i' } }
+                    ]
+                },
+                { _id: 1, username: 1, name: 1, email: 1, wallet: 1, wallet_topup: 1 }
+            );
+
+            responseData.msg = `Found ${users.length} users matching '${query}'`;
+            responseData.data = users;
+            return responseHelper.success(res, responseData);
+
+        } catch (error) {
+            log.error('Error searching users:', error);
+            responseData.msg = 'Failed to search users';
+            return responseHelper.error(res, responseData);
+        }
+    }
+
 };

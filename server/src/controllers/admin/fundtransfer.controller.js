@@ -10,15 +10,30 @@ module.exports = {
 
     getAll: async (req, res) => {
         let reqObj = req.query;
-        log.info('Recieved request for getAll:', reqObj);
+        log.info('Received request for getAll:', reqObj);
         let responseData = {};
         try {
+            // Set type parameter for filtering
+            // type 2 = admin transfers only
+            if (reqObj.type === '2') {
+                reqObj.type = 2; // Filter for admin transfers only
+            }
+
+            // Get fund transfers with user details
             let getList = await fundTransferDbHandler.getAll(reqObj);
+
+            // Format the response for the datatable
             responseData.msg = 'Data fetched successfully!';
-            responseData.data = getList;
+            responseData.result = {
+                list: getList.docs || [],
+                count: getList.totalDocs || 0,
+                totalPages: getList.totalPages || 0,
+                page: getList.page || 1
+            };
+
             return responseHelper.success(res, responseData);
         } catch (error) {
-            log.error('failed to fetch data with error::', error);
+            log.error('Failed to fetch data with error:', error);
             responseData.msg = 'Failed to fetch data';
             return responseHelper.error(res, responseData);
         }
@@ -44,39 +59,77 @@ module.exports = {
         let reqObj = req.body;
         let ObjectId = mongoose.Types.ObjectId
         try {
-
-            const user = await userDbHandler.getOneByQuery({ _id: ObjectId(reqObj.user_id) })
-            if (!user) {
-                responseData.msg = "Invalid User !!!";
+            // Validate user ID
+            if (!reqObj.user_id) {
+                responseData.msg = "User ID is required";
                 return responseHelper.error(res, responseData);
             }
 
-            let fee = reqObj.amount * 0;
+            // Find user by ID or username
+            let user;
+            if (mongoose.isValidObjectId(reqObj.user_id)) {
+                user = await userDbHandler.getOneByQuery({ _id: ObjectId(reqObj.user_id) });
+            } else {
+                // If not a valid ObjectId, try to find by username
+                user = await userDbHandler.getOneByQuery({ username: reqObj.user_id });
+            }
 
+            if (!user) {
+                responseData.msg = "User not found. Please check the User ID or username";
+                return responseHelper.error(res, responseData);
+            }
+
+            // Validate amount
+            if (!reqObj.amount || reqObj.amount <= 0) {
+                responseData.msg = "Amount must be greater than zero";
+                return responseHelper.error(res, responseData);
+            }
+
+            // Determine wallet type
+            const walletType = reqObj.type || 0; // 0: Main wallet, 1: Topup wallet
+            const walletField = walletType === 0 ? 'wallet' : 'wallet_topup';
+            const walletName = walletType === 0 ? 'Main Wallet' : 'Topup Wallet';
+
+            // Prepare fund transfer data
             let data = {
-                user_id: reqObj.user_id,
+                user_id: user._id.toString(),
+                user_id_from: null, // Admin transfer
                 amount: reqObj.amount,
-                fee: fee,
-                remark: reqObj.remark,
-                type: reqObj.type,
-            }
-            if (reqObj.type == 0) {
-                user.wallet += reqObj.amount
-                // await userDbHandler.updateOneByQuery({ _id: ObjectId(reqObj.user_id) }, { $inc: { wallet: reqObj.amount } });
-            }
-            else if (reqObj.type == 1) {
-                user.wallet_topup += reqObj.amount
-                // await userDbHandler.updateOneByQuery({ _id: ObjectId(reqObj.user_id) }, { $inc: { wallet_topup: reqObj.amount } });
-            }
+                fee: 0, // No fee for admin transfers
+                remark: reqObj.remark || `Admin fund transfer to ${walletName}`,
+                type: 2, // Type 2 for admin transfers (0: user-to-user, 1: self transfer, 2: admin transfer)
+                from_wallet: 'admin', // Admin is the source
+                to_wallet: walletType === 0 ? 'main' : 'topup' // Destination wallet
+            };
 
-            await user.save()
+            // Log the data for debugging
+            console.log('Fund transfer data:', data);
 
+            // Update user's wallet balance
+            const updateObj = {};
+            updateObj[walletField] = user[walletField] + reqObj.amount;
+
+            // Save the updated user
+            user[walletField] += reqObj.amount;
+            await user.save();
+
+            // Create fund transfer record
             await fundTransferDbHandler.create(data);
-            responseData.msg = "Data added successfully!";
+
+            responseData.msg = `Successfully transferred $${reqObj.amount} to user ${user.username}'s ${walletName}`;
+            responseData.data = {
+                user: {
+                    _id: user._id,
+                    username: user.username,
+                    wallet: user.wallet,
+                    wallet_topup: user.wallet_topup
+                },
+                transfer: data
+            };
             return responseHelper.success(res, responseData);
         } catch (error) {
-            log.error('failed to update data with error::', error);
-            responseData.msg = "Failed to add data";
+            log.error('Failed to process fund transfer with error:', error);
+            responseData.msg = "Failed to process fund transfer";
             return responseHelper.error(res, responseData);
         }
     },

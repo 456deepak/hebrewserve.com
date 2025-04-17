@@ -15,7 +15,10 @@ The following cron jobs are scheduled to run automatically:
 3. **User Rank Updates** - Runs at 1 AM UTC every day
    - Updates user ranks based on trade balance and active team size
 
-4. **Reset Daily Login Counters and Profit Activation** - Runs at midnight UTC every day
+4. **Team Rewards Processing** - Runs at 2 AM UTC every day
+   - Processes team rewards based on team deposit and time period
+
+5. **Reset Daily Login Counters and Profit Activation** - Runs at midnight UTC every day
    - Resets daily profit activation and login counters
 
 ## Manually Triggering Cron Jobs
@@ -37,7 +40,12 @@ You can manually trigger any of the cron jobs using the following API endpoints:
    POST /api/v1/cron/processUserRanks
    ```
 
-4. **Reset Daily Login Counters**
+4. **Process Team Rewards**
+   ```
+   POST /api/v1/cron/processTeamRewards
+   ```
+
+5. **Reset Daily Login Counters**
    ```
    POST /api/v1/cron/resetDailyLoginCounters
    ```

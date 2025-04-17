@@ -382,81 +382,140 @@ const distributeGlobalAutoPoolMatrixIncome = async (user_id, amount, fromPackage
 // Process team commissions for HebrewServe business plan
 const processTeamCommission = async (user_id, amount) => {
   try {
+    console.log('\n======== PROCESSING TEAM COMMISSION ========');
+    console.log(`Processing team commission for user ID: ${user_id}, amount: $${amount}`);
+
     // Get the investment plan to access team commission percentages
     const plans = await investmentPlanDbHandler.getAll({});
     if (!plans || plans.length === 0) {
-      log.error('No investment plans found for team commission');
+      console.error('No investment plans found for team commission');
       return;
     }
     const plan = plans[0];
+    console.log(`Using investment plan: ${plan.title}`);
+    console.log(`Team commission percentages: Level 1: ${plan.team_commission.level1}%, Level 2: ${plan.team_commission.level2}%, Level 3: ${plan.team_commission.level3}%`);
 
-    // Get the user
-    const user = await userDbHandler.getById(user_id);
-    if (!user) {
-      log.error('User not found for team commission');
+    // Get the user who made the investment
+    const investmentUser = await userDbHandler.getById(user_id);
+    if (!investmentUser) {
+      console.error(`User not found for ID: ${user_id}`);
       return;
     }
+    console.log(`Investment user: ${investmentUser.username || investmentUser.email} (ID: ${investmentUser._id})`);
+    console.log(`Investment user's refer_id: ${investmentUser.refer_id}`);
 
-    // Start with the user's referrer
-    let currentUser = await userDbHandler.getById(user.refer_id);
+    // Start with the user's referrer (level 1)
+    let currentUser = await userDbHandler.getById(investmentUser.refer_id);
     let level = 1;
 
     // Process up to 3 levels
     while (currentUser && level <= 3) {
+      console.log(`\n--- LEVEL ${level} COMMISSION ---`);
+      console.log(`Current upline user: ${currentUser.username || currentUser.email} (ID: ${currentUser._id})`);
+      console.log(`Current upline user's refer_id: ${currentUser.refer_id}`);
+
       // Check if the user has enough direct referrals for this level
       const directReferrals = await userDbHandler.getByQuery({ refer_id: currentUser._id });
+      console.log(`Current upline user has ${directReferrals.length} direct referrals`);
 
       // Level 1 requires 1 direct, Level 2 requires 2 directs, Level 3 requires 3 directs
-      if (directReferrals.length >= level) {
+      const requiredDirects = level;
+      console.log(`Level ${level} requires ${requiredDirects} direct referrals`);
+
+      if (directReferrals.length >= requiredDirects) {
+        console.log(`User has enough direct referrals (${directReferrals.length} >= ${requiredDirects}). Processing commission...`);
+
         // Calculate daily profit from the investment amount
         // Get user's trade booster or use default
-        const user = await userDbHandler.getById(user_id);
-        const tradeBooster = user?.trade_booster || 2.5; // Default to 2.5% if not set
+        const tradeBooster = investmentUser?.trade_booster || 2.5; // Default to 2.5% if not set
+        console.log(`Trade booster: ${tradeBooster}%`);
+        console.log(`Current upline user's refer_id type: ${typeof currentUser.refer_id}, value: ${currentUser.refer_id}`);
+
+        // Debug the next upline user
+        if (currentUser.refer_id) {
+          const nextUser = await userDbHandler.getById(currentUser.refer_id);
+          console.log(`Next upline user exists: ${!!nextUser}, ID: ${nextUser?._id}, username: ${nextUser?.username || nextUser?.email}`);
+        }
 
         // Calculate daily income generated from the investment
         const dailyIncome = (amount * tradeBooster) / 100;
+        console.log(`Daily income: $${dailyIncome.toFixed(2)} (${tradeBooster}% of $${amount})`);
 
         // Calculate commission amount based on level and daily income
         const commissionPercentage = plan.team_commission[`level${level}`];
         const commissionAmount = (dailyIncome * commissionPercentage) / 100;
+        console.log(`Commission percentage: ${commissionPercentage}%`);
+        console.log(`Commission amount: $${commissionAmount.toFixed(4)} (${commissionPercentage}% of $${dailyIncome.toFixed(2)})`);
 
-        // Add commission to user's wallet
-        await userDbHandler.updateById(currentUser._id, {
-          $inc: {
-            wallet: commissionAmount,
-            "extra.teamCommission": commissionAmount
-          }
-        });
+        try {
+          // Add commission to user's wallet
+          const walletUpdate = await userDbHandler.updateById(currentUser._id, {
+            $inc: {
+              wallet: commissionAmount,
+              "extra.teamCommission": commissionAmount
+            }
+          });
+          console.log(`Wallet update result: ${walletUpdate ? 'Success' : 'Failed'}`);
 
-        // Create income record
-        await incomeDbHandler.create({
-          user_id: ObjectId(currentUser._id),
-          user_id_from: ObjectId(user_id),
-          type: 'team_commission',
-          amount: commissionAmount,
-          status: 'credited',
-          level: level,
-          description: `Level ${level} team commission on daily profit`,
-          extra: {
-            investmentAmount: amount,
-            dailyIncome: dailyIncome,
-            percentage: commissionPercentage
-          }
-        });
+          // Create income record
+          const incomeRecord = await incomeDbHandler.create({
+            user_id: ObjectId(currentUser._id),
+            user_id_from: ObjectId(user_id),
+            type: 'team_commission',
+            amount: commissionAmount,
+            status: 'credited',
+            level: level,
+            description: `Level ${level} team commission on daily profit`,
+            extra: {
+              investmentAmount: amount,
+              dailyIncome: dailyIncome,
+              percentage: commissionPercentage
+            }
+          });
+          console.log(`Income record created: ${incomeRecord ? 'Success' : 'Failed'} (ID: ${incomeRecord?._id})`);
+        } catch (updateError) {
+          console.error(`Error updating wallet or creating income record: ${updateError.message}`);
+        }
+      } else {
+        console.log(`User does not have enough direct referrals (${directReferrals.length} < ${requiredDirects}). Skipping commission.`);
       }
 
       // Move to the next level (upline)
       if (currentUser.refer_id) {
-        currentUser = await userDbHandler.getById(currentUser.refer_id);
+        // Check if refer_id is a string 'admin' - this is a special case
+        if (currentUser.refer_id === 'admin') {
+          console.log(`Found special 'admin' refer_id. Looking up admin user...`);
+          // Try to find the admin user with ID 678f9a82a2dac325900fc47e
+          const adminUser = await userDbHandler.getOneByQuery({ _id: "678f9a82a2dac325900fc47e" });
+          if (adminUser) {
+            console.log(`Found admin user: ${adminUser.username || adminUser.email} (ID: ${adminUser._id})`);
+            currentUser = adminUser;
+          } else {
+            console.log(`Admin user not found. Breaking out of loop.`);
+            break;
+          }
+        } else {
+          // Normal case - refer_id is an ObjectId
+          const nextUser = await userDbHandler.getById(currentUser.refer_id);
+          console.log(`Moving to next level. Next upline user: ${nextUser ? (nextUser.username || nextUser.email) : 'None'} (ID: ${nextUser?._id})`);
+          if (nextUser) {
+            currentUser = nextUser;
+          } else {
+            console.log(`Next upline user not found. Breaking out of loop.`);
+            break;
+          }
+        }
       } else {
+        console.log(`No more upline users. Breaking out of loop.`);
         break;
       }
       level++;
     }
 
+    console.log('======== TEAM COMMISSION PROCESSING COMPLETE ========\n');
     return true;
   } catch (error) {
-    log.error('Error processing team commission:', error);
+    console.error('Error processing team commission:', error);
     return false;
   }
 };
@@ -464,77 +523,225 @@ const processTeamCommission = async (user_id, amount) => {
 // Process user ranks based on trade balance and active team
 const _processUserRanks = async () => {
   try {
+    console.log('\n======== PROCESSING USER RANKS ========');
+
     // Get all ranks ordered by min_trade_balance (highest to lowest)
     const ranks = await rankDbHandler.getByQuery({}, {}).sort({ min_trade_balance: -1 });
+    console.log(`Found ${ranks.length} ranks in the database:`);
+    ranks.forEach(rank => {
+      console.log(`- ${rank.name}: Min Investment $${rank.min_trade_balance}, Team Size ${rank.active_team}, Trade Booster ${rank.trade_booster}%`);
+    });
 
     // Get all users
     const users = await userDbHandler.getByQuery({});
+    console.log(`Processing ranks for ${users.length} users`);
+
+    let updatedCount = 0;
+    let unchangedCount = 0;
 
     for (const user of users) {
-      // Get user's direct referrals (active team)
+      console.log(`\n--- PROCESSING USER: ${user.username || user.email} ---`);
+
+      // Get user's direct referrals
       const directReferrals = await userDbHandler.getByQuery({ refer_id: user._id });
-      const activeTeamCount = directReferrals.length;
+
+      // Filter to only include active direct referrals (those who have invested)
+      const activeDirectReferrals = directReferrals.filter(ref => ref.total_investment > 0);
+      const activeTeamCount = activeDirectReferrals.length;
+
+      console.log(`User details:`);
+      console.log(`- ID: ${user._id}`);
+      console.log(`- Total investment: $${user.total_investment}`);
+      console.log(`- Total direct referrals: ${directReferrals.length}`);
+      console.log(`- Active direct referrals: ${activeTeamCount}`);
+      console.log(`- Current rank: ${user.rank}`);
+      console.log(`- Current trade booster: ${user.trade_booster}%`);
+      console.log(`- Current level ROI income: ${user.level_roi_income}`);
+      console.log(`- Current daily limit view: ${user.daily_limit_view}`);
+
+      if (directReferrals.length > 0) {
+        console.log(`Direct referrals (active ones have investments > $0):`);
+        directReferrals.forEach((ref, index) => {
+          const isActive = ref.total_investment > 0;
+          console.log(`  ${index + 1}. ${ref.username || ref.email} (Investment: $${ref.total_investment}) - ${isActive ? 'ACTIVE' : 'INACTIVE'}`);
+        });
+      }
 
       // Find the highest rank the user qualifies for based on investment and team size
-      // Note: Daily login requirement is checked separately during login
+      // Start from highest rank and work down
       let newRank = 'ACTIVE'; // Default rank
       let qualifiedRank = null;
 
-      console.log(`Processing rank for user ${user.username || user.email}:`);
-      console.log(`- Total investment: $${user.total_investment}`);
-      console.log(`- Active team count: ${activeTeamCount}`);
-      console.log(`- Current rank: ${user.rank}`);
+      console.log(`\nChecking rank qualifications:`);
 
-      // Use the ranks from the database (which now have lower requirements for testing)
-      const ranksToUse = ranks;
+      // Always use hardcoded ranks to ensure consistency
+      console.log('Using hardcoded ranks for reliable rank calculation');
+      const sortedRanks = [
+        {
+          name: 'SUPREME',
+          min_trade_balance: 20000,
+          active_team: 60,
+          daily_limit_view: 5,
+          trade_booster: 4.5,
+          level_roi_income: 5
+        },
+        {
+          name: 'ROYAL',
+          min_trade_balance: 5000,
+          active_team: 22,
+          daily_limit_view: 4,
+          trade_booster: 4.0,
+          level_roi_income: 3
+        },
+        {
+          name: 'VETERAM',
+          min_trade_balance: 2000,
+          active_team: 11,
+          daily_limit_view: 3,
+          trade_booster: 3.5,
+          level_roi_income: 2
+        },
+        {
+          name: 'PRIME',
+          min_trade_balance: 500,
+          active_team: 5,
+          daily_limit_view: 2,
+          trade_booster: 3.0,
+          level_roi_income: 1
+        },
+        {
+          name: 'ACTIVE',
+          min_trade_balance: 50,
+          active_team: 0,
+          daily_limit_view: 1,
+          trade_booster: 2.5,
+          level_roi_income: 0
+        }
+      ];
 
-      for (const rank of ranksToUse) {
-        console.log(`Checking rank ${rank.name}:`);
-        console.log(`- Required investment: $${rank.min_trade_balance}`);
-        console.log(`- Required team size: ${rank.active_team}`);
+      // Log each rank for debugging
+      console.log(`Using ${sortedRanks.length} hardcoded ranks:`);
+      sortedRanks.forEach(rank => {
+        console.log(`Rank: ${rank.name}, Min Trade Balance: $${rank.min_trade_balance}, Active Team: ${rank.active_team}, Trade Booster: ${rank.trade_booster}%`);
+      });
+
+      // Loop through ranks from highest to lowest
+      for (const rank of sortedRanks) {
+        console.log(`- ${rank.name}: `);
+        console.log(`  Required investment: $${rank.min_trade_balance} (User has: $${user.total_investment}) - ${user.total_investment >= rank.min_trade_balance ? 'PASS' : 'FAIL'}`);
+        console.log(`  Required team size: ${rank.active_team} (User has: ${activeTeamCount}) - ${activeTeamCount >= rank.active_team ? 'PASS' : 'FAIL'}`);
 
         // Check if user meets the investment and team size requirements
         if (user.total_investment >= rank.min_trade_balance && activeTeamCount >= rank.active_team) {
           qualifiedRank = rank;
           newRank = rank.name;
-          console.log(`User qualifies for rank: ${newRank}`);
+          console.log(`  RESULT: User qualifies for rank ${newRank}`);
+          break; // Found the highest rank, exit loop
         } else {
-          console.log(`User does not qualify for rank: ${rank.name}`);
-          // If we found a rank the user qualifies for, exit the loop
-          if (qualifiedRank) break;
+          console.log(`  RESULT: User does not qualify for rank ${rank.name}`);
         }
       }
 
       // If no rank was found, use ACTIVE as default
       if (!qualifiedRank) {
         console.log(`User does not qualify for any rank, using default: ACTIVE`);
+        qualifiedRank = await rankDbHandler.getOneByQuery({ name: 'ACTIVE' });
       }
 
-      // Update user's rank if it has changed
-      if (user.rank !== newRank) {
-        // Get the rank details
-        const rankDetails = await rankDbHandler.getOneByQuery({ name: newRank });
+      // Enhanced debugging for all users
+      console.log(`\n*** DETAILED RANK QUALIFICATION INFO ***`);
+      console.log(`Email: ${user.email}`);
+      console.log(`ID: ${user._id}`);
+      console.log(`Total investment: $${user.total_investment}`);
+      console.log(`Direct referrals: ${activeTeamCount}`);
+      console.log(`Current rank: ${user.rank}`);
+      console.log(`Qualified for rank: ${newRank}`);
+      console.log(`Qualified rank details: ${qualifiedRank ? JSON.stringify(qualifiedRank) : 'None'}`);
 
-        // Update user with new rank and related benefits
-        await userDbHandler.updateById(user._id, {
-          rank: newRank,
-          trade_booster: rankDetails.trade_booster,
-          level_roi_income: rankDetails.level_roi_income,
-          daily_limit_view: rankDetails.daily_limit_view
-        });
+      // Always check if user meets requirements for any rank, regardless of current rank
+      // This ensures we update users who qualify for higher ranks
+      const shouldUpdate = true; // Always evaluate rank updates
 
-        console.log(`Updated user ${user.username || user.email} rank to ${newRank} with benefits:`);
-        console.log(`- Trade Booster: ${rankDetails.trade_booster}%`);
-        console.log(`- Level ROI Income: ${rankDetails.level_roi_income}`);
-        console.log(`- Daily Limit View: ${rankDetails.daily_limit_view}`);
+      if (shouldUpdate) {
+        // Get the rank details directly from the hardcoded ranks
+        console.log(`Getting rank details for ${newRank} from hardcoded ranks`);
+        let rankDetails = sortedRanks.find(rank => rank.name === newRank);
 
-        log.info(`Updated user ${user.username} rank to ${newRank}`);
+        if (!rankDetails) {
+          console.log(`ERROR: Rank details not found for ${newRank} in hardcoded ranks, using ACTIVE as fallback`);
+          rankDetails = {
+            name: 'ACTIVE',
+            min_trade_balance: 50,
+            active_team: 0,
+            daily_limit_view: 1,
+            trade_booster: 2.5,
+            level_roi_income: 0
+          };
+        }
+
+        console.log(`Using rank details for ${newRank}:`, rankDetails);
+
+        console.log(`\nUpdating user ${user.username || user.email}:`);
+        console.log(`- From rank: ${user.rank} to ${newRank}`);
+        console.log(`- From trade booster: ${user.trade_booster}% to ${rankDetails.trade_booster}%`);
+        console.log(`- From level ROI income: ${user.level_roi_income} to ${rankDetails.level_roi_income}`);
+        console.log(`- From daily limit view: ${user.daily_limit_view} to ${rankDetails.daily_limit_view}`);
+
+        // Use direct MongoDB update to ensure it works
+        try {
+          // First try with updateById
+          const updateResult = await userDbHandler.updateById(user._id, {
+            rank: newRank,
+            trade_booster: rankDetails.trade_booster,
+            level_roi_income: rankDetails.level_roi_income,
+            daily_limit_view: rankDetails.daily_limit_view,
+            rank_benefits_active: true // Ensure rank benefits are active
+          });
+
+          console.log(`Update result: ${updateResult ? 'Success' : 'Failed'}`);
+
+          // If update didn't work, try with direct MongoDB update
+          if (!updateResult) {
+            console.log('First update method failed, trying direct MongoDB update');
+            const mongoose = require('mongoose');
+            const User = mongoose.model('Users');
+
+            const directUpdate = await User.findByIdAndUpdate(
+              user._id,
+              {
+                $set: {
+                  rank: newRank,
+                  trade_booster: rankDetails.trade_booster,
+                  level_roi_income: rankDetails.level_roi_income,
+                  daily_limit_view: rankDetails.daily_limit_view,
+                  rank_benefits_active: true
+                }
+              },
+              { new: true }
+            );
+
+            console.log('Direct update result:', directUpdate ? 'Success' : 'Failed');
+            if (directUpdate) {
+              console.log(`Updated user rank to ${directUpdate.rank} with trade booster ${directUpdate.trade_booster}%`);
+            }
+          }
+
+          updatedCount++;
+        } catch (updateError) {
+          console.error('Error during update:', updateError);
+        }
+      } else {
+        console.log(`No rank change needed for user ${user.username || user.email}`);
+        unchangedCount++;
       }
     }
 
-    return { success: true, message: 'User ranks updated successfully' };
+    console.log(`\n======== USER RANK PROCESSING COMPLETE ========`);
+    console.log(`Updated ${updatedCount} users, ${unchangedCount} users unchanged`);
+
+    return { success: true, message: 'User ranks updated successfully', updatedCount, unchangedCount };
   } catch (error) {
-    log.error('Failed to update user ranks with error::', error);
+    console.error('Failed to update user ranks with error::', error);
     return { success: false, message: 'Failed to update user ranks', error };
   }
 };
@@ -542,13 +749,35 @@ const _processUserRanks = async () => {
 // API endpoint for processing user ranks
 const processUserRanks = async (req, res) => {
   try {
-    console.log("Processing user ranks...");
+    // console.log("Processing user ranks...");
+    // console.log("Request body:", req.body);
+
+    // Check if API key is provided and valid
+    if (!req.body.key) {
+      console.error("API key not provided in request body");
+      return res.status(401).json({
+        status: false,
+        message: 'API key is required in request body'
+      });
+    }
+
+    if (req.body.key !== process.env.APP_API_KEY) {
+      console.error("Invalid API key provided");
+      return res.status(401).json({
+        status: false,
+        message: 'Invalid API key'
+      });
+    }
+
+    // console.log("API key validated successfully");
     const result = await _processUserRanks();
 
     if (result.success) {
       return res.status(200).json({
         status: true,
-        message: 'User ranks processed successfully'
+        message: 'User ranks processed successfully',
+        updatedCount: result.updatedCount,
+        unchangedCount: result.unchangedCount
       });
     } else {
       return res.status(500).json({
@@ -568,7 +797,7 @@ const processUserRanks = async (req, res) => {
 };
 
 // Process team rewards based on team deposit and time period
-const processTeamRewards = async () => {
+const _processTeamRewards = async () => {
   try {
     // Team reward tiers
     const teamRewardTiers = [
@@ -579,26 +808,75 @@ const processTeamRewards = async () => {
 
     // Get all users
     const users = await userDbHandler.getByQuery({});
+    console.log(`Processing team rewards for ${users.length} users`);
 
     for (const user of users) {
+      console.log(`\n--- PROCESSING USER: ${user.username || user.email} (ID: ${user._id}) ---`);
+
       // Get user's team (all referrals in their downline)
       const directReferrals = await userDbHandler.getByQuery({ refer_id: user._id });
+      console.log(`User has ${directReferrals.length} direct referrals`);
+
+      // Filter to only include active direct referrals (those who have invested)
+      const activeDirectReferrals = directReferrals.filter(ref => ref.total_investment > 0);
+      console.log(`User has ${activeDirectReferrals.length} ACTIVE direct referrals (with investments)`);
+
+      if (activeDirectReferrals.length > 0) {
+        console.log(`Active direct referrals:`);
+        activeDirectReferrals.forEach((ref, index) => {
+          console.log(`  ${index + 1}. ${ref.username || ref.email} (Investment: $${ref.total_investment})`);
+        });
+      }
 
       // Calculate total team deposit
       let totalTeamDeposit = 0;
+      let activeTeamDeposit = 0;
+
+      // Count direct referrals' investments
       for (const referral of directReferrals) {
         totalTeamDeposit += referral.total_investment;
+        if (referral.total_investment > 0) {
+          activeTeamDeposit += referral.total_investment;
+        }
 
         // Get indirect referrals (level 2)
         const indirectReferrals = await userDbHandler.getByQuery({ refer_id: referral._id });
+        console.log(`Direct referral ${referral.username || referral.email} has ${indirectReferrals.length} indirect referrals`);
+
+        // Filter to only include active indirect referrals
+        const activeIndirectReferrals = indirectReferrals.filter(ref => ref.total_investment > 0);
+
+        // Count indirect referrals' investments
         for (const indirectReferral of indirectReferrals) {
           totalTeamDeposit += indirectReferral.total_investment;
+          if (indirectReferral.total_investment > 0) {
+            activeTeamDeposit += indirectReferral.total_investment;
+          }
         }
       }
 
+      console.log(`Total team deposit: $${totalTeamDeposit}`);
+      console.log(`Active team deposit: $${activeTeamDeposit}`);
+
       // Check if user qualifies for any team reward
+      console.log(`\nChecking team reward qualification:`);
+      console.log(`Team reward tiers:`);
+      teamRewardTiers.forEach((tier, index) => {
+        console.log(`Tier ${index + 1}: $${tier.team_deposit} team deposit → $${tier.reward_amount} reward after ${tier.time_period} days`);
+      });
+
+      // Use active team deposit for qualification
+      const depositToUse = activeTeamDeposit;
+      console.log(`Using active team deposit ($${depositToUse}) for qualification`);
+
       for (const tier of teamRewardTiers) {
-        if (totalTeamDeposit >= tier.team_deposit) {
+        console.log(`\nChecking tier: $${tier.team_deposit} team deposit requirement`);
+        console.log(`User's active team deposit: $${depositToUse}`);
+        console.log(`Qualification status: ${depositToUse >= tier.team_deposit ? 'QUALIFIED' : 'NOT QUALIFIED'}`);
+
+        if (depositToUse >= tier.team_deposit) {
+          console.log(`User qualifies for $${tier.reward_amount} reward after ${tier.time_period} days`);
+
           // Check if user already has an active team reward of this tier
           const existingReward = await teamRewardDbHandler.getOneByQuery({
             user_id: user._id,
@@ -606,10 +884,16 @@ const processTeamRewards = async () => {
             status: { $in: ['pending', 'completed'] }
           });
 
+          console.log(`User already has this reward: ${existingReward ? 'YES' : 'NO'}`);
+
           if (!existingReward) {
+            console.log(`Creating new team reward for user`);
+
             // Create new team reward
             const endDate = new Date();
             endDate.setDate(endDate.getDate() + tier.time_period);
+            console.log(`Reward start date: ${new Date().toISOString()}`);
+            console.log(`Reward end date: ${endDate.toISOString()}`);
 
             const newReward = {
               user_id: user._id,
@@ -622,9 +906,23 @@ const processTeamRewards = async () => {
               remarks: `Team deposit of $${tier.team_deposit} achieved. Reward will be processed after ${tier.time_period} days.`
             };
 
-            await teamRewardDbHandler.create(newReward);
-            log.info(`Created new team reward for user ${user.username}`);
+            try {
+              const createdReward = await teamRewardDbHandler.create(newReward);
+              console.log(`Team reward created successfully: ${createdReward ? 'YES' : 'NO'}`);
+              if (createdReward) {
+                console.log(`Reward ID: ${createdReward._id}`);
+              }
+              log.info(`Created new team reward for user ${user.username || user.email}`);
+            } catch (rewardError) {
+              console.error(`Error creating team reward: ${rewardError.message}`);
+            }
+          } else {
+            console.log(`Skipping reward creation - user already has an active reward of this tier`);
+            console.log(`Existing reward status: ${existingReward.status}`);
+            console.log(`Existing reward end date: ${existingReward.end_date}`);
           }
+        } else {
+          console.log(`User does not qualify for this tier`);
         }
       }
     }
@@ -684,23 +982,23 @@ const _processActiveMemberReward = async () => {
     }
     const plan = plans[0];
 
-    console.log(`Found investment plan: ${plan.title}`);
+    // console.log(`Found investment plan: ${plan.title}`);
 
     // Check if plan has active_member_rewards
     if (!plan.active_member_rewards) {
-      console.log('No active_member_rewards field in the investment plan');
+      // console.log('No active_member_rewards field in the investment plan');
       return;
     }
 
     if (!Array.isArray(plan.active_member_rewards)) {
-      console.log(`active_member_rewards is not an array: ${typeof plan.active_member_rewards}`);
+      // console.log(`active_member_rewards is not an array: ${typeof plan.active_member_rewards}`);
       return;
     }
 
-    console.log(`Plan has ${plan.active_member_rewards.length} active member reward levels:`);
-    plan.active_member_rewards.forEach((level, index) => {
-      console.log(`Level ${index + 1}: ${level.direct} direct referrals, ${level.team} team size, $${level.reward} reward`);
-    });
+    // console.log(`Plan has ${plan.active_member_rewards.length} active member reward levels:`);
+    // plan.active_member_rewards.forEach((level, index) => {
+    //   console.log(`Level ${index + 1}: ${level.direct} direct referrals, ${level.team} team size, $${level.reward} reward`);
+    // });
 
     // Get all users directly using mongoose
     let users = [];
@@ -709,28 +1007,28 @@ const _processActiveMemberReward = async () => {
       const User = mongoose.model('Users');
       users = await User.find({});
 
-      console.log(`Found ${users.length} users using direct mongoose query`);
+      // console.log(`Found ${users.length} users using direct mongoose query`);
 
       // Continue with processing if we have users
       if (!users || users.length === 0) {
-        console.log('No users found in the database');
+        // console.log('No users found in the database');
         return;
       }
     } catch (userQueryError) {
-      console.error('Error querying users:', userQueryError);
+      // console.error('Error querying users:', userQueryError);
       return;
     }
 
-    console.log(`Processing active member rewards for ${users.length} users`);
+    // console.log(`Processing active member rewards for ${users.length} users`);
 
     for (const user of users) {
-      console.log(`\nProcessing user: ${user.username || user.email} (ID: ${user._id})`);
+      // console.log(`\nProcessing user: ${user.username || user.email} (ID: ${user._id})`);
 
       // Count direct referrals using mongoose directly
       const User = mongoose.model('Users');
       const directReferrals = await User.find({ refer_id: user._id });
       const directCount = directReferrals.length;
-      console.log(`Direct referrals: ${directCount}`);
+      // console.log(`Direct referrals: ${directCount}`);
       if (directCount > 0) {
         console.log(`Direct referral emails: ${directReferrals.map(u => u.email).join(', ')}`);
       }
@@ -749,7 +1047,7 @@ const _processActiveMemberReward = async () => {
       };
 
       await countTeamMembers(user._id);
-      console.log(`Total team size: ${teamSize}`);
+      // console.log(`Total team size: ${teamSize}`);
 
       // Check if plan has active_member_rewards
       if (!plan.active_member_rewards || !Array.isArray(plan.active_member_rewards)) {
@@ -757,20 +1055,20 @@ const _processActiveMemberReward = async () => {
         continue;
       }
 
-      console.log(`Checking ${plan.active_member_rewards.length} reward levels...`);
+      // console.log(`Checking ${plan.active_member_rewards.length} reward levels...`);
 
       // Check if user qualifies for any reward level
       for (const rewardLevel of plan.active_member_rewards) {
-        console.log(`Checking reward level: ${rewardLevel.direct} direct, ${rewardLevel.team} team, $${rewardLevel.reward} reward`);
+        // console.log(`Checking reward level: ${rewardLevel.direct} direct, ${rewardLevel.team} team, $${rewardLevel.reward} reward`);
 
         // TEMPORARY TEST CODE: Lower thresholds for testing
         const testDirect = 2; // Temporarily set to 2 instead of rewardLevel.direct
         const testTeam = 7;   // Temporarily set to 7 instead of rewardLevel.team
 
-        console.log(`Using test thresholds: ${testDirect} direct, ${testTeam} team (original: ${rewardLevel.direct} direct, ${rewardLevel.team} team)`);
+        // console.log(`Using test thresholds: ${testDirect} direct, ${testTeam} team (original: ${rewardLevel.direct} direct, ${rewardLevel.team} team)`);
 
         if (directCount >= testDirect && teamSize >= testTeam) {
-          console.log(`User qualifies for reward level: ${rewardLevel.direct} direct, ${rewardLevel.team} team, $${rewardLevel.reward} reward`);
+          // console.log(`User qualifies for reward level: ${rewardLevel.direct} direct, ${rewardLevel.team} team, $${rewardLevel.reward} reward`);
 
           // Check if user already received this reward using mongoose directly
           const Income = mongoose.model('Incomes');
@@ -781,10 +1079,10 @@ const _processActiveMemberReward = async () => {
             'extra.teamRequired': rewardLevel.team
           });
 
-          console.log(`Checking if user already received this reward: ${existingReward ? 'Yes' : 'No'}`);
+          // console.log(`Checking if user already received this reward: ${existingReward ? 'Yes' : 'No'}`);
 
           if (!existingReward) {
-            console.log(`Creating new active member reward of $${rewardLevel.reward} for user ${user.username || user.email}`);
+            // console.log(`Creating new active member reward of $${rewardLevel.reward} for user ${user.username || user.email}`);
 
             try {
               // Create reward income record using mongoose directly
@@ -803,7 +1101,7 @@ const _processActiveMemberReward = async () => {
               });
 
               await newIncome.save();
-              console.log(`Income record created with ID: ${newIncome._id}`);
+              // console.log(`Income record created with ID: ${newIncome._id}`);
 
               // Add reward to user's wallet using mongoose directly
               const walletUpdate = await User.findByIdAndUpdate(
@@ -907,13 +1205,18 @@ const _processDailyTradingProfit = async () => {
             // User has met login requirements, use their rank's trade booster
             tradeBooster = user?.trade_booster || investment.daily_profit || 2.5;
             console.log(`User ${user.username || user.email} has met daily login requirements. Using rank trade booster: ${tradeBooster}%`);
+            console.log(`User rank: ${user.rank}, Rank benefits active: ${user.rank_benefits_active}`);
         } else {
             // User has not met login requirements, use base rate (ACTIVE rank)
             tradeBooster = 2.5; // Base rate for ACTIVE rank
             console.log(`User ${user.username || user.email} has NOT met daily login requirements. Using base trade booster: ${tradeBooster}%`);
+            console.log(`User rank: ${user.rank}, Rank benefits active: ${user.rank_benefits_active}, Daily logins: ${user.daily_logins}, Required logins: ${user.daily_limit_view || 1}`);
         }
 
         const dailyProfit = (investment.amount * tradeBooster) / 100;
+
+        // We'll process team commissions after all daily profits are calculated
+        // This is to avoid processing team commissions multiple times
 
         // If user has level ROI income enabled and has met login requirements, process it
         if (user?.level_roi_income > 0 && hasMetLoginRequirement) {
@@ -998,6 +1301,32 @@ const _processDailyTradingProfit = async () => {
     }
 
     console.log(`Daily profit processing completed. Processed ${processedCount} investments with total profit of $${totalProfit.toFixed(2)}`);
+
+    // Now process team commissions for all users with active investments
+    console.log('\n======== PROCESSING TEAM COMMISSIONS FOR ALL USERS ========');
+    try {
+      const usersWithInvestments = await userDbHandler.getByQuery({ total_investment: { $gt: 0 } });
+      console.log(`Found ${usersWithInvestments.length} users with investments`);
+
+      for (const user of usersWithInvestments) {
+        console.log(`\nProcessing team commissions for user: ${user.username || user.email} (ID: ${user._id})`);
+        console.log(`User's total investment: $${user.total_investment}`);
+        console.log(`User's refer_id: ${user.refer_id}`);
+
+        try {
+          // Process team commissions for this user's total investment
+          const teamCommissionResult = await processTeamCommission(user._id, user.total_investment);
+          console.log(`Team commission processing result: ${teamCommissionResult ? 'Success' : 'Failed'}`);
+        } catch (commissionError) {
+          console.error(`Error processing team commission for user ${user._id}: ${commissionError.message}`);
+        }
+      }
+
+      console.log('======== TEAM COMMISSION PROCESSING COMPLETED ========\n');
+    } catch (teamCommissionError) {
+      console.error(`Error processing team commissions: ${teamCommissionError.message}`);
+    }
+
     return { success: true, processedCount, totalProfit };
   } catch (error) {
     console.error('Error processing daily trading profit:', error);
@@ -1055,11 +1384,59 @@ cron.schedule('0 1 * * *', () => _processUserRanks(), {
   timezone: "UTC"
 });
 
-// Schedule team rewards processing (daily) - COMMENTED OUT (not needed for initial launch)
-// cron.schedule('0 2 * * *', processTeamRewards, {
-//   scheduled: true,
-//   timezone: "UTC"
-// });
+// API endpoint for processing team rewards
+const processTeamRewards = async (req, res) => {
+  try {
+    console.log("Processing team rewards...");
+    console.log("Request body:", req.body);
+
+    // Check if API key is provided and valid
+    if (!req.body.key) {
+      console.error("API key not provided in request body");
+      return res.status(401).json({
+        status: false,
+        message: 'API key is required in request body'
+      });
+    }
+
+    if (req.body.key !== process.env.APP_API_KEY) {
+      console.error("Invalid API key provided");
+      return res.status(401).json({
+        status: false,
+        message: 'Invalid API key'
+      });
+    }
+
+    console.log("API key validated successfully");
+    const result = await _processTeamRewards();
+
+    if (result.success) {
+      return res.status(200).json({
+        status: true,
+        message: 'Team rewards processed successfully'
+      });
+    } else {
+      return res.status(500).json({
+        status: false,
+        message: 'Failed to process team rewards',
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error in team rewards API endpoint:', error);
+    return res.status(500).json({
+      status: false,
+      message: 'Error processing team rewards',
+      error: error.message
+    });
+  }
+};
+
+// Schedule team rewards processing (daily)
+cron.schedule('0 2 * * *', _processTeamRewards, {
+  scheduled: true,
+  timezone: "UTC"
+});
 
 // Reset daily login counters and profit activation at midnight
 const resetDailyLoginCounters = async (req, res) => {

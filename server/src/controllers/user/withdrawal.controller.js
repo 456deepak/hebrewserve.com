@@ -137,15 +137,27 @@ module.exports = {
                 return responseHelper.error(res, responseData);
             }
 
+            // Check if user has already made a withdrawal today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Start of today
+
+            if (user.last_withdrawal_date && new Date(user.last_withdrawal_date) >= today) {
+                responseData.msg = 'You can only make one withdrawal per day. Please try again tomorrow.';
+                return responseHelper.error(res, responseData);
+            }
+
             // Check if withdrawal amount is within limits (20% of trade amount)
             if (user.total_investment === 0) {
                 responseData.msg = 'You need to have active investments to make withdrawals';
                 return responseHelper.error(res, responseData);
             }
 
-            const maxWithdrawalAmount = user.total_investment * 0.2; // 20% of trade amount
+            // Use last_investment_amount if available, otherwise fall back to total_investment
+            const investmentAmount = user.last_investment_amount > 0 ? user.last_investment_amount : user.total_investment;
+            const maxWithdrawalAmount = investmentAmount * 0.2; // 20% of investment amount
+
             if (amount > maxWithdrawalAmount) {
-                responseData.msg = `Withdrawal amount exceeds the maximum limit of 20% of your total investment ($${maxWithdrawalAmount.toFixed(2)})`;
+                responseData.msg = `Withdrawal amount exceeds the maximum limit of 20% of your ${user.last_investment_amount > 0 ? 'latest' : 'total'} investment ($${maxWithdrawalAmount.toFixed(2)})`;
                 return responseHelper.error(res, responseData);
             }
 
@@ -167,7 +179,7 @@ module.exports = {
                 }
             }
 
-            // Update user's wallet balance
+            // Update user's wallet balance and last withdrawal date
             await userModel.updateOne(
                 { _id: user_id },
                 {
@@ -175,6 +187,9 @@ module.exports = {
                         wallet: -amount,
                         wallet_withdraw: amount,
                         "extra.withdrawals": amount
+                    },
+                    $set: {
+                        last_withdrawal_date: new Date()
                     }
                 }
             ).then(async val => {

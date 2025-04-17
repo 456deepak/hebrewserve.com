@@ -14,7 +14,7 @@ module.exports = {
 		type: Joi.number().optional().min(0).max(10).label("Type"),
 		type_to: Joi.number().optional().allow("").min(0).max(10).label("To Type"),
 		remark: Joi.string().trim().required().min(3).max(250).label("Remark"),
-		from_wallet: Joi.string().trim().optional().valid('main', 'topup').label("From Wallet"),
-		to_wallet: Joi.string().trim().optional().valid('main', 'topup').label("To Wallet")
+		from_wallet: Joi.string().trim().optional().valid('main', 'topup','admin').label("From Wallet"),
+		to_wallet: Joi.string().trim().optional().valid('main', 'topup','admin').label("To Wallet")
 	})
 };

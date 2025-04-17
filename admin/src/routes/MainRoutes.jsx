@@ -158,6 +158,7 @@ const DeductFunds = Loadable(lazy(() => import('pages/user/DeductFunds')))
 const AllUsers = Loadable(lazy(() => import('pages/user/AllUsers')))
 const DailyTask = Loadable(lazy(() => import('pages/user/DailyTask')))
 const UpdateContent = Loadable(lazy(() => import('pages/user/UpdateContent')))
+const FundTransferManagement = Loadable(lazy(() => import('pages/user/FundTransferManagement')))
 
 const Chat = Loadable(lazy(() => import('pages/support/chat')))
 // ==============================|| MAIN ROUTES ||============================== //
@@ -202,6 +203,10 @@ const MainRoutes = {
               element: <TransferFunds />
             },
             {
+              path: 'fundTransferManagement',
+              element: <FundTransferManagement />
+            },
+            {
               path: 'deductFunds',
               element: <DeductFunds />
             }
@@ -222,7 +227,7 @@ const MainRoutes = {
               path: 'staked-report',
               element: <Stakedreport />
             },
-          
+
           ]
         },
         {
@@ -232,7 +237,7 @@ const MainRoutes = {
               path: 'invest-reports',
               element: <Investment_Reports />
             },
-           
+
             // {
             //   path: 'deposits',
             //   element: <Deposit_Reports />

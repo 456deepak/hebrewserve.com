@@ -108,6 +108,8 @@ module.exports = () => {
     Router.get("/get-user-count", adminUserController.getCount);
     Router.get("/get-user-downline", adminUserController.getDownline);
     Router.put("/update-user", validationMiddleware(userValidation.update, 'body'), adminUserController.update);
+    Router.get("/update-last-investment-amounts", adminUserController.updateLastInvestmentAmounts);
+    Router.get("/search-users", adminUserController.searchUsers);
 
 
     // USER SOCIAL VWERIFICATION

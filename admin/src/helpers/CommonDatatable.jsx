@@ -62,7 +62,7 @@ export const fuzzySort = (rowA, rowB, columnId) => {
 
 // ==============================|| REACT TABLE ||============================== //
 
-export default function ReactTable({ apiPoint, type, columns, noQueryStrings, team }) {
+export default function ReactTable({ apiPoint, type, columns, noQueryStrings, team, refreshData }) {
   const [columnFilters, setColumnFilters] = useState([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [data, setData] = useState([]);
@@ -142,8 +142,10 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
   };
 
   useEffect(() => {
+    // Clear existing data before fetching new data
+    setData([]);
     fetchReports(1);
-  }, []);
+  }, [apiPoint, type, refreshData]); // Refresh when apiPoint, type, or refreshData changes
 
   const table = useReactTable({
     data,
@@ -283,4 +285,11 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
 
 // FilteringTable.propTypes = { getValue: PropTypes.func };
 
-ReactTable.propTypes = { columns: PropTypes.array, data: PropTypes.array };
+ReactTable.propTypes = {
+  columns: PropTypes.array,
+  apiPoint: PropTypes.string.isRequired,
+  type: PropTypes.number,
+  noQueryStrings: PropTypes.bool,
+  team: PropTypes.bool,
+  refreshData: PropTypes.any // Any value that changes to trigger a refresh
+};

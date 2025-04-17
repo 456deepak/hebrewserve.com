@@ -104,6 +104,7 @@ module.exports = {
             console.log('User data:', user ? 'User found' : 'User not found');
             if (user) {
                 console.log('User wallet balance:', user.wallet);
+                console.log('User last investment amount:', user.last_investment_amount);
             }
 
             if (!user) {
@@ -114,6 +115,12 @@ module.exports = {
             // Check if user has sufficient balance
             if (user.wallet < amount) {
                 responseData.msg = "Insufficient wallet balance";
+                return responseHelper.error(res, responseData);
+            }
+
+            // Check if investment amount is greater than or equal to last investment
+            if (user.last_investment_amount > 0 && amount < user.last_investment_amount) {
+                responseData.msg = `New investment amount must be greater than or equal to your last investment of $${user.last_investment_amount}`;
                 return responseHelper.error(res, responseData);
             }
 
@@ -343,6 +350,9 @@ module.exports = {
                         $inc: {
                             wallet: -amount,
                             total_investment: amount
+                        },
+                        $set: {
+                            last_investment_amount: amount
                         }
                     }
                 );
@@ -503,6 +513,12 @@ module.exports = {
                 return responseHelper.error(res, responseData);
             }
 
+            // Check if investment amount is greater than or equal to last investment
+            if (user.last_investment_amount > 0 && amount < user.last_investment_amount) {
+                responseData.msg = `New investment amount must be greater than or equal to your last investment of $${user.last_investment_amount}`;
+                return responseHelper.error(res, responseData);
+            }
+
             // Get investment plan
             const plans = await investmentPlanDbHandler.getAll({});
             if (!plans || plans.length === 0) {
@@ -617,6 +633,9 @@ module.exports = {
                         $inc: {
                             wallet: -amount,
                             total_investment: amount
+                        },
+                        $set: {
+                            last_investment_amount: amount
                         }
                     }
                 );

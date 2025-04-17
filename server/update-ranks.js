@@ -1,11 +1,17 @@
 // Script to update rank data
 const mongoose = require('mongoose');
 
-// Connect to MongoDB
-mongoose.connect('mongodb+srv://dev3brt:dev3@cluster0.vwped.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+// Load environment variables
+require('dotenv').config();
+
+// Connect to MongoDB using the connection string from .env
+// Fix the database name issue by removing the .com part
+const dbUrl = process.env.DB_URL.replace('hebrewserve.com', 'hebrewserve');
+console.log('Using database URL:', dbUrl);
+mongoose.connect(dbUrl)
   .then(async () => {
     console.log('Connected to MongoDB');
-    
+
     try {
       // Define Rank model directly
       const rankSchema = new mongoose.Schema({
@@ -43,14 +49,14 @@ mongoose.connect('mongodb+srv://dev3brt:dev3@cluster0.vwped.mongodb.net/?retryWr
           default: {}
         }
       }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
-      
+
       // Create model
       const Rank = mongoose.model('Ranks', rankSchema);
-      
+
       // Delete existing ranks
       await Rank.deleteMany({});
       console.log('Deleted existing ranks');
-      
+
       // Create new ranks based on the table
       const ranks = [
         {
@@ -94,11 +100,11 @@ mongoose.connect('mongodb+srv://dev3brt:dev3@cluster0.vwped.mongodb.net/?retryWr
           level_roi_income: 5
         }
       ];
-      
+
       // Insert ranks
       await Rank.insertMany(ranks);
       console.log('Created new ranks');
-      
+
       // Verify ranks were created
       const createdRanks = await Rank.find({}).sort({ min_trade_balance: 1 });
       console.log('\nRanks in the database:');
@@ -111,7 +117,7 @@ mongoose.connect('mongodb+srv://dev3brt:dev3@cluster0.vwped.mongodb.net/?retryWr
         console.log(`- Level ROI Income: ${rank.level_roi_income}`);
         console.log('---');
       });
-      
+
     } catch (error) {
       console.error('Error updating ranks:', error);
     } finally {

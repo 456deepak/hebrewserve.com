@@ -242,10 +242,48 @@ module.exports = {
         // log.info('Recieved request for User Profile for User:', user);
         let responseData = {};
         try {
+            // Get basic user data
             let userData = await userDbHandler.getById(id, { password: 0 });
+
+            if (!userData) {
+                responseData.msg = 'User not found';
+                return responseHelper.error(res, responseData);
+            }
+
+            // Calculate team deposit and team size
+            // Get direct referrals
+            const directReferrals = await userDbHandler.getByQuery({ refer_id: id });
+
+            // Calculate team deposit (direct + indirect referrals)
+            let teamDeposit = 0;
+            let teamSize = directReferrals.length;
+
+            // Count direct referrals' investments
+            for (const referral of directReferrals) {
+                teamDeposit += referral.total_investment || 0;
+
+                // Get indirect referrals (level 2)
+                const indirectReferrals = await userDbHandler.getByQuery({ refer_id: referral._id });
+                teamSize += indirectReferrals.length;
+
+                // Count indirect referrals' investments
+                for (const indirectReferral of indirectReferrals) {
+                    teamDeposit += indirectReferral.total_investment || 0;
+                }
+            }
+
+            // Add team deposit and team size to user data
+            const userDataObj = userData.toJSON();
+            if (!userDataObj.extra) {
+                userDataObj.extra = {};
+            }
+
+            userDataObj.extra.teamDeposit = teamDeposit;
+            userDataObj.extra.teamSize = teamSize;
+            userDataObj.extra.directReferrals = directReferrals.length;
+
             responseData.msg = `Data Fetched Successfully !`;
-            responseData.data = userData;
-            console.log(res);
+            responseData.data = userDataObj;
             return responseHelper.success(res, responseData);
 
         } catch (error) {

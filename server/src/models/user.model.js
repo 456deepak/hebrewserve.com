@@ -220,6 +220,18 @@ const userSchema = new Schema({
     lastDailyProfitActivation: {
         type: Date,
         default: null // Last time daily profit was activated
+    },
+    last_withdrawal_date: {
+        type: Date,
+        default: null // Last time user made a withdrawal
+    },
+    last_transfer_date: {
+        type: Date,
+        default: null // Last time user made a transfer
+    },
+    last_investment_amount: {
+        type: Number,
+        default: 0 // Amount of user's last investment
     }
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 

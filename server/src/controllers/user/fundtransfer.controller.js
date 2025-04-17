@@ -82,6 +82,32 @@ module.exports = {
                 return responseHelper.error(res, responseData);
             }
 
+            // Check if user has already made a transfer today
+            if (transferType === 0) { // Only apply once-per-day rule for user-to-user transfers
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Start of today
+
+                if (userFrom.last_transfer_date && new Date(userFrom.last_transfer_date) >= today) {
+                    responseData.msg = 'You can only make one transfer per day. Please try again tomorrow.';
+                    return responseHelper.error(res, responseData);
+                }
+
+                // Check if transfer amount exceeds 20% of latest investment
+                if (userFrom.total_investment === 0) {
+                    responseData.msg = 'You need to have active investments to make transfers';
+                    return responseHelper.error(res, responseData);
+                }
+
+                // Use last_investment_amount if available, otherwise fall back to total_investment
+                const investmentAmount = userFrom.last_investment_amount > 0 ? userFrom.last_investment_amount : userFrom.total_investment;
+                const maxTransferAmount = investmentAmount * 0.2; // 20% of investment amount
+
+                if (reqObj.amount > maxTransferAmount) {
+                    responseData.msg = `Transfer amount exceeds the maximum limit of 20% of your ${userFrom.last_investment_amount > 0 ? 'latest' : 'total'} investment ($${maxTransferAmount.toFixed(2)})`;
+                    return responseHelper.error(res, responseData);
+                }
+            }
+
             // Handle different transfer types
             if (transferType === 1) {
                 // Self transfer
@@ -143,8 +169,11 @@ module.exports = {
                 const sourceField = fromWallet === 'main' ? 'wallet' : 'wallet_topup';
                 const destField = toWallet === 'main' ? 'wallet' : 'wallet_topup';
 
-                // Update the sender's wallet
-                const senderUpdate = { $inc: {} };
+                // Update the sender's wallet and last transfer date
+                const senderUpdate = {
+                    $inc: {},
+                    $set: { last_transfer_date: new Date() }
+                };
                 senderUpdate.$inc[sourceField] = -reqObj.amount;
                 await userDbHandler.updateOneByQuery({_id:user_id}, senderUpdate);
 

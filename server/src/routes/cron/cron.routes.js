@@ -44,6 +44,7 @@ module.exports = () => {
     Router.post("/processActiveMemberRewards", cronController.processActiveMemberReward)
     Router.post("/resetDailyLoginCounters", cronController.resetDailyLoginCounters)
     Router.post("/processUserRanks", cronController.processUserRanks)
+    Router.post("/processTeamRewards", cronController.processTeamRewards)
     /**************************
      * END OF AUTHORIZED ROUTES
      **************************/

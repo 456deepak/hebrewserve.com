@@ -40,12 +40,12 @@ const fundtransferSchema = new Schema({
     },
     from_wallet: {
         type: String,
-        enum: ['main', 'topup'],
+        enum: ['main', 'topup', 'admin'],
         default: 'topup'
     },
     to_wallet: {
         type: String,
-        enum: ['main', 'topup'],
+        enum: ['main', 'topup', 'admin'],
         default: 'topup'
     }
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });

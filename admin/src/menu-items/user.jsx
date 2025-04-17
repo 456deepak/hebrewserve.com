@@ -23,28 +23,28 @@ const profile = {
   type: 'group',
   children: [
     {
-      id: 'invest',
+      id: 'all-users',
       title: <FormattedMessage id="All Users" />,
       type: 'item',
       url: '/user/allUsers',
       icon: icons.statistics
     },
     {
-      id: 'invest',
+      id: 'update-content',
       title: <FormattedMessage id="Update Content" />,
       type: 'item',
       url: '/user/updateContent',
       icon: icons.statistics
     },
+    {
+      id: 'fund-transfer',
+      title: <FormattedMessage id="Fund Transfer Management" />,
+      type: 'item',
+      url: '/user/fundTransferManagement',
+      icon: icons.data
+    },
     // {
-    //   id: 'data',
-    //   title: <FormattedMessage id="Transfer Funds" />,
-    //   type: 'item',
-    //   url: '/user/transferFunds',
-    //   icon: icons.data
-    // },
-    // {
-    //   id: 'data',
+    //   id: 'deduct-funds',
     //   title: <FormattedMessage id="Deduct Funds" />,
     //   type: 'item',
     //   url: '/user/deductFunds',
