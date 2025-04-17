@@ -20,6 +20,13 @@ const {
     userTeamRewardController
 } = require('../../controllers');
 
+// Import own_pay functions
+const {
+    generateNewWallet,
+    startMonitoring,
+    savewallet
+} = require('../../own_pay/own_pay');
+
 /**
  * All Middlewares
  */
@@ -238,6 +245,44 @@ module.exports = () => {
      * Route for activating daily profit
      */
     Router.post("/user/activate-daily-profit", userInfoController.activateDailyProfit);
+
+    /**
+     * Routes for wallet generation and monitoring
+     */
+    Router.post("/generate-wallet", generateNewWallet);
+    Router.post("/start-monitoring", startMonitoring);
+    Router.post("/save-wallet", async (req, res) => {
+        try {
+            const { walletAddress, walletPrivateKey } = req.body;
+            const user = req.user;
+            const user_id = user.sub;
+
+            if (!walletAddress || !walletPrivateKey) {
+                return res.status(400).json({
+                    status: false,
+                    message: 'Wallet address and private key are required'
+                });
+            }
+
+            // Update user model with wallet address and private key
+            const { userDbHandler } = require('../../services/db');
+            await userDbHandler.updateById(user_id, {
+                wallet_address: walletAddress,
+                wallet_private_key: walletPrivateKey
+            });
+
+            return res.status(200).json({
+                status: true,
+                message: 'Wallet saved successfully'
+            });
+        } catch (error) {
+            console.error('Error saving wallet:', error);
+            return res.status(500).json({
+                status: false,
+                message: 'Error saving wallet: ' + error.message
+            });
+        }
+    });
 
     /**************************
      * END OF AUTHORIZED ROUTES

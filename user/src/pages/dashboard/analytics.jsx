@@ -596,7 +596,10 @@ export default function DashboardAnalytics() {
                       </Tooltip>
                     </Box>
                     <Typography variant="body2" color="grey.400" sx={{ mt: 1 }}>
-                      Account Balance: <span style={{ color: theme.palette.success.light, fontWeight: 600 }}>${(userData?.wallet || 0).toFixed(2)}</span>
+                      Main Wallet: <span style={{ color: theme.palette.success.light, fontWeight: 600 }}>${(userData?.wallet || 0).toFixed(2)}</span>
+                    </Typography>
+                    <Typography variant="body2" color="grey.400">
+                      Top-up Wallet: <span style={{ color: theme.palette.warning.light, fontWeight: 600 }}>${(userData?.wallet_topup || 0).toFixed(2)}</span> <span style={{ fontSize: '0.8rem', color: theme.palette.grey[500] }}>(used for investments)</span>
                     </Typography>
                   </Box>
                 </Box>
@@ -738,17 +741,17 @@ export default function DashboardAnalytics() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
                   <Typography variant="h6" color="grey.400" gutterBottom>
-                    Wallet Balance
+                    Top-up Wallet Balance
                   </Typography>
                   <Typography variant="h3" color="common.white" sx={{ fontWeight: 700 }}>
-                    ${(userData?.wallet || 0).toFixed(2)}
+                    ${(userData?.wallet_topup || 0).toFixed(2)}
                   </Typography>
                 </Box>
                 <Avatar
                   sx={{
-                    bgcolor: alpha(theme.palette.success.main, 0.2),
+                    bgcolor: alpha(theme.palette.warning.main, 0.2),
                     p: 1.5,
-                    color: theme.palette.success.main
+                    color: theme.palette.warning.main
                   }}
                 >
                   <Wallet variant="Bold" size={24} />
@@ -756,7 +759,7 @@ export default function DashboardAnalytics() {
               </Box>
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="grey.400">
-                  Your current wallet balance
+                  Your top-up wallet balance (used for investments)
                 </Typography>
               </Box>
             </Paper>

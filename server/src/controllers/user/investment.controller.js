@@ -112,9 +112,9 @@ module.exports = {
                 return responseHelper.error(res, responseData);
             }
 
-            // Check if user has sufficient balance
-            if (user.wallet < amount) {
-                responseData.msg = "Insufficient wallet balance";
+            // Check if user has sufficient balance in wallet_topup
+            if (user.wallet_topup < amount) {
+                responseData.msg = "Insufficient top-up wallet balance";
                 return responseHelper.error(res, responseData);
             }
 
@@ -338,8 +338,8 @@ module.exports = {
                 console.log('Investment ID:', investment._id);
             }
 
-            // Update user's wallet and total investment
-            console.log('Updating user wallet. Current wallet balance:', user.wallet);
+            // Update user's wallet_topup and total investment
+            console.log('Updating user wallet_topup. Current wallet_topup balance:', user.wallet_topup);
             console.log('Amount to deduct:', amount);
 
             try {
@@ -348,7 +348,7 @@ module.exports = {
                     { _id: user_id },
                     {
                         $inc: {
-                            wallet: -amount,
+                            wallet_topup: -amount,
                             total_investment: amount
                         },
                         $set: {
@@ -366,11 +366,11 @@ module.exports = {
 
                 // Get updated user data to confirm the change
                 const updatedUser = await userDbHandler.getById(user_id);
-                console.log('Updated wallet balance:', updatedUser.wallet);
-                console.log('User wallet updated after investment: Success');
+                console.log('Updated wallet_topup balance:', updatedUser.wallet_topup);
+                console.log('User wallet_topup updated after investment: Success');
             } catch (walletError) {
-                console.error('Error updating wallet:', walletError);
-                throw new Error(`Failed to update wallet: ${walletError.message}`);
+                console.error('Error updating wallet_topup:', walletError);
+                throw new Error(`Failed to update wallet_topup: ${walletError.message}`);
             }
 
             // Process team commission
@@ -507,9 +507,9 @@ module.exports = {
                 return responseHelper.error(res, responseData);
             }
 
-            // Check if user has sufficient balance
-            if (user.wallet < amount) {
-                responseData.msg = "Insufficient wallet balance";
+            // Check if user has sufficient balance in wallet_topup
+            if (user.wallet_topup < amount) {
+                responseData.msg = "Insufficient top-up wallet balance";
                 return responseHelper.error(res, responseData);
             }
 
@@ -621,8 +621,8 @@ module.exports = {
             // Create the investment
             const investment = await createTradingPackageInvestment(user_id, amount, plan);
 
-            // Update user's wallet and total investment
-            console.log('Updating user wallet in add method. Current wallet balance:', user.wallet);
+            // Update user's wallet_topup and total investment
+            console.log('Updating user wallet_topup in add method. Current wallet_topup balance:', user.wallet_topup);
             console.log('Amount to deduct:', amount);
 
             try {
@@ -631,7 +631,7 @@ module.exports = {
                     { _id: user_id },
                     {
                         $inc: {
-                            wallet: -amount,
+                            wallet_topup: -amount,
                             total_investment: amount
                         },
                         $set: {
@@ -649,10 +649,10 @@ module.exports = {
 
                 // Get updated user data to confirm the change
                 const updatedUser = await userDbHandler.getById(user_id);
-                console.log('Updated wallet balance in add method:', updatedUser.wallet);
+                console.log('Updated wallet_topup balance in add method:', updatedUser.wallet_topup);
             } catch (walletError) {
-                console.error('Error updating wallet in add method:', walletError);
-                throw new Error(`Failed to update wallet in add method: ${walletError.message}`);
+                console.error('Error updating wallet_topup in add method:', walletError);
+                throw new Error(`Failed to update wallet_topup in add method: ${walletError.message}`);
             }
 
             // Process team commission

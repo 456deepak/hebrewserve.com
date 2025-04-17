@@ -44,6 +44,7 @@ const TradingPackage = () => {
   const [loading, setLoading] = useState(false);
   const [userInvestments, setUserInvestments] = useState([]);
   const [userWallet, setUserWallet] = useState(0);
+  const [userTopupWallet, setUserTopupWallet] = useState(0);
 
   // Min and max investment limits
   const minInvestment = 50;
@@ -105,11 +106,14 @@ const TradingPackage = () => {
           setUserInvestments(investmentsResponse.data.result);
         }
 
-        // Fetch user profile to get wallet balance
+        // Fetch user profile to get wallet balances
         const profileResponse = await axios.get('/user/profile');
-        console.log(profileResponse.data.result.wallet);
         if (profileResponse.data && profileResponse.data.result) {
-          setUserWallet(profileResponse.data.result.wallet);
+          const userData = profileResponse.data.result;
+          console.log('User wallet balance:', userData.wallet);
+          console.log('User topup wallet balance:', userData.wallet_topup);
+          setUserWallet(userData.wallet);
+          setUserTopupWallet(userData.wallet_topup || 0);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -142,9 +146,9 @@ const TradingPackage = () => {
       return;
     }
 
-    // Check if user has enough funds
-    if (investAmount > userWallet) {
-      setError(`Insufficient funds. Your wallet balance is $${userWallet.toFixed(2)}`);
+    // Check if user has enough funds in top-up wallet
+    if (investAmount > userTopupWallet) {
+      setError(`Insufficient funds. Your top-up wallet balance is $${userTopupWallet.toFixed(2)}`);
       return;
     }
 
@@ -169,13 +173,13 @@ const TradingPackage = () => {
         if (response.data.data) {
           setUserInvestments([...userInvestments, response.data.data.investment]);
 
-          // Update wallet balance
-          const newWalletBalance = userWallet - investAmount;
+          // Update top-up wallet balance
+          const newTopupWalletBalance = userTopupWallet - investAmount;
+          setUserTopupWallet(newTopupWalletBalance);
+
+          // If there was a first deposit bonus, add it to the main wallet balance
           if (response.data.data.firstDepositBonus) {
-            // If there was a first deposit bonus, add it to the wallet balance
-            setUserWallet(newWalletBalance + response.data.data.firstDepositBonus);
-          } else {
-            setUserWallet(newWalletBalance);
+            setUserWallet(userWallet + response.data.data.firstDepositBonus);
           }
         }
 
@@ -211,7 +215,13 @@ const TradingPackage = () => {
                 Daily Trading Profit: 2.5%
               </Typography>
               <Typography variant="body1" paragraph sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                Your Wallet Balance: ${userWallet.toFixed(2)}
+                Your Main Wallet Balance: ${userWallet.toFixed(2)}
+              </Typography>
+              <Typography variant="body1" paragraph sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
+                Your Top-up Wallet Balance: ${userTopupWallet.toFixed(2)}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" paragraph>
+                Note: Investments are made from your Top-up Wallet
               </Typography>
               <Button
                 variant="contained"
@@ -260,7 +270,11 @@ const TradingPackage = () => {
           <DialogContentText>
             Enter the amount you want to invest. The amount must be between ${minInvestment} and ${maxInvestment}.
             <br />
-            <strong>Your wallet balance: ${userWallet.toFixed(2)}</strong>
+            <strong>Your top-up wallet balance: ${userTopupWallet.toFixed(2)}</strong>
+            <br />
+            <Typography variant="caption" color="textSecondary">
+              Note: Investments are made from your Top-up Wallet. If you need to add funds, please visit the Deposit Funds page.
+            </Typography>
           </DialogContentText>
           <TextField
             autoFocus

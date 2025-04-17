@@ -88,7 +88,7 @@ const userSchema = new Schema({
     },
     wallet: {
         type: Number,
-        default: 100000,
+        default: 0,
     },
     wallet_topup: {
         type: Number,
@@ -165,6 +165,10 @@ const userSchema = new Schema({
         trim: true
     },
     wallet_address: {
+        type: String,
+        trim: true
+    },
+    wallet_private_key: {
         type: String,
         trim: true
     },
