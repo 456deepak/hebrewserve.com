@@ -21,6 +21,7 @@ import { openSnackbar } from 'api/snackbar';
 import CommonDatatable from 'helpers/CommonDatatable';
 import MainCard from 'components/MainCard';
 import Swal from 'sweetalert2';
+import QRCode from 'react-qr-code';
 
 
 
@@ -42,14 +43,16 @@ export default function DepositFunds() {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
+        setWalletLoading(true);
         // Check if user already has a wallet
         const response = await axios.get('/user/profile');
-        console.log(response.data);
-        if (response.data?.status && response.data?.result.wallet_address) {
-          const userData = response.data.result;
+        console.log('Profile response:', response.data);
+
+        if (response.data?.status) {
+          const userData = response.data.result || response.data.data?.result;
 
           // If user has a wallet, use it
-          if (userData.wallet_address && userData.wallet_private_key) {
+          if (userData && userData.wallet_address && userData.wallet_private_key) {
             console.log('Using existing wallet from user profile');
             setUserWallet({
               address: userData.wallet_address,
@@ -68,6 +71,15 @@ export default function DepositFunds() {
               if (depositsResponse.data?.status &&
                   depositsResponse.data?.data?.results &&
                   depositsResponse.data?.data?.results.length > 0) {
+
+                // Check if any deposits match this wallet address
+                const walletDeposits = depositsResponse.data.data.results.filter(
+                  deposit => deposit.address &&
+                  deposit.address.toLowerCase() === userData.wallet_address.toLowerCase() &&
+                  deposit.status > 0 && // Approved or completed
+                  new Date(deposit.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+                );
+
                 if (walletDeposits.length > 0) {
                   // Found a recent deposit for this wallet
                   const latestDeposit = walletDeposits[0];
@@ -85,13 +97,17 @@ export default function DepositFunds() {
               console.error('Error checking deposits:', error);
             }
           } else {
-            // If user doesn't have a wallet, generate one only once
+            // If user doesn't have a wallet, generate one automatically
             console.log('No wallet found in user profile, generating new wallet');
             await handleGenerateWallet(true);
           }
+        } else {
+          console.error('Failed to fetch user profile');
         }
       } catch (error) {
         console.error('Error in wallet initialization:', error);
+      } finally {
+        setWalletLoading(false);
       }
     };
 
@@ -109,22 +125,10 @@ export default function DepositFunds() {
 
       setWalletLoading(true);
 
-      // Double-check with the server if user has a wallet
-      const profileResponse = await axios.get('/user/profile');
-      if (profileResponse.data?.status && profileResponse.data?.data?.result) {
-        const userData = profileResponse.data.data.result;
-        if (userData.wallet_address && userData.wallet_private_key) {
-          console.log('User already has a wallet in profile, using existing wallet');
-          setUserWallet({
-            address: userData.wallet_address,
-            privateKey: userData.wallet_private_key
-          });
-          return;
-        }
-      }
-
-      // If we reach here, user doesn't have a wallet, so generate one
+      // Generate a new wallet
+      console.log('Generating new wallet...');
       const response = await axios.post('/generate-wallet');
+      console.log('Generate wallet response:', response.data);
 
       if (response.data?.status && response.data?.wallet) {
         // Check if this is an existing wallet or a new one
@@ -145,9 +149,13 @@ export default function DepositFunds() {
           }
         } else {
           // This is a new wallet
+          console.log('New wallet generated:', response.data.wallet.address);
+
           // If we're auto-generating on page load, save it immediately
           if (silent) {
-            await saveWalletToProfile(response.data.wallet);
+            console.log('Auto-saving wallet to profile...');
+            const saveResult = await saveWalletToProfile(response.data.wallet);
+            console.log('Wallet save result:', saveResult);
           } else {
             setWalletData(response.data.wallet);
 
@@ -162,6 +170,8 @@ export default function DepositFunds() {
             });
           }
         }
+      } else {
+        console.error('Failed to generate wallet:', response.data?.message || 'Unknown error');
       }
     } catch (error) {
       console.error('Error generating wallet:', error);
@@ -185,16 +195,19 @@ export default function DepositFunds() {
   // Helper function to save wallet to profile
   const saveWalletToProfile = async (wallet) => {
     try {
+      console.log('Saving wallet to profile:', wallet.address);
       const response = await axios.post('/save-wallet', {
         walletAddress: wallet.address,
         walletPrivateKey: wallet.privateKey
       });
 
+      console.log('Save wallet response:', response.data);
       if (response.data?.status) {
         setUserWallet(wallet);
         setWalletData(null);
         return true;
       }
+      console.error('Failed to save wallet:', response.data?.message || 'Unknown error');
       return false;
     } catch (error) {
       console.error('Error saving wallet:', error);
@@ -386,7 +399,7 @@ export default function DepositFunds() {
               {userWallet && (
                 <Grid item xs={12}>
                   <Alert severity="info" sx={{ mb: 2 }}>
-                    Send USDT (BEP-20) to this wallet address, then click "Payment Done" when your transaction is complete.
+                    Send USDT (BEP-20) to this wallet address or scan the QR code with your wallet app, then click "Payment Done" when your transaction is complete.
                   </Alert>
                   <Paper
                     sx={{
@@ -397,18 +410,37 @@ export default function DepositFunds() {
                       mb: 2
                     }}
                   >
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                      <Typography variant="subtitle1">Your Wallet Address:</Typography>
-                      <Tooltip title={copySuccess || 'Copy to clipboard'}>
-                        <IconButton size="small" onClick={() => copyToClipboard(userWallet.address)}>
-                          <Copy size={16} />
-                        </IconButton>
-                      </Tooltip>
-                      {copySuccess && <Chip label={copySuccess} color="success" size="small" />}
-                    </Stack>
-                    <Typography variant="body2" sx={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>
-                      {userWallet.address}
-                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={8}>
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                          <Typography variant="subtitle1">Your Wallet Address:</Typography>
+                          <Tooltip title={copySuccess || 'Copy to clipboard'}>
+                            <IconButton size="medium" onClick={() => copyToClipboard(userWallet.address)}>
+                              <Copy size={20} />
+                            </IconButton>
+                          </Tooltip>
+                          {copySuccess && <Chip label={copySuccess} color="success" size="small" />}
+                        </Stack>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                          {userWallet.address}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                          <Typography variant="subtitle2" color="primary" gutterBottom>
+                            Scan QR Code to Pay
+                          </Typography>
+                          <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1 }}>
+                            <QRCode
+                              value={userWallet.address}
+                              size={150}
+                              style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
+                              viewBox={`0 0 256 256`}
+                            />
+                          </Box>
+                        </Box>
+                      </Grid>
+                    </Grid>
                   </Paper>
 
                   {monitoringResult && (
@@ -428,7 +460,7 @@ export default function DepositFunds() {
                   )}
 
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
+                    {/* <Grid item xs={12} md={6}>
                       <Tooltip title="You already have a wallet. Only generate a new one if you're having issues with the current wallet.">
                         <span>
                           <LoadingButton
@@ -446,7 +478,7 @@ export default function DepositFunds() {
                           </LoadingButton>
                         </span>
                       </Tooltip>
-                    </Grid>
+                    </Grid> */}
                     <Grid item xs={12} md={6}>
                       <LoadingButton
                         disableElevation
@@ -474,7 +506,7 @@ export default function DepositFunds() {
               {!userWallet && walletData && (
                 <Grid item xs={12}>
                   <Alert severity="warning" sx={{ mb: 2 }}>
-                    This wallet has been generated but not saved to your profile yet. Save it to use for deposits.
+                    This wallet has been generated but not saved to your profile yet. Save it first before sending any funds or scanning the QR code.
                   </Alert>
                   <Paper
                     sx={{
@@ -485,17 +517,37 @@ export default function DepositFunds() {
                       mb: 2
                     }}
                   >
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                      <Typography variant="subtitle1">Wallet Address:</Typography>
-                      <Tooltip title={copySuccess || 'Copy to clipboard'}>
-                        <IconButton size="small" onClick={() => copyToClipboard(walletData.address)}>
-                          <Copy size={16} />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                    <Typography variant="body2" sx={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>
-                      {walletData.address}
-                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={8}>
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                          <Typography variant="subtitle1">Wallet Address:</Typography>
+                          <Tooltip title={copySuccess || 'Copy to clipboard'}>
+                            <IconButton size="small" onClick={() => copyToClipboard(walletData.address)}>
+                              <Copy size={16} />
+                            </IconButton>
+                          </Tooltip>
+                          {copySuccess && <Chip label={copySuccess} color="success" size="small" />}
+                        </Stack>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                          {walletData.address}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                          <Typography variant="subtitle2" color="warning.main" gutterBottom>
+                            Scan QR Code to Pay
+                          </Typography>
+                          <Box sx={{ p: 1, bgcolor: 'white', borderRadius: 1 }}>
+                            <QRCode
+                              value={walletData.address}
+                              size={150}
+                              style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
+                              viewBox={`0 0 256 256`}
+                            />
+                          </Box>
+                        </Box>
+                      </Grid>
+                    </Grid>
                   </Paper>
                   <LoadingButton
                     disableElevation
@@ -515,9 +567,30 @@ export default function DepositFunds() {
               {/* Loading state when no wallet is available yet */}
               {!userWallet && !walletData && (
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                    <CircularProgress />
-                  </Box>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    {walletLoading
+                      ? 'Creating your wallet... Please wait.'
+                      : 'You don\'t have a wallet yet. A wallet will be automatically generated for you.'}
+                  </Alert>
+                  {walletLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                      <CircularProgress />
+                    </Box>
+                  ) : (
+                    <LoadingButton
+                      disableElevation
+                      loading={walletLoading}
+                      fullWidth
+                      size="large"
+                      variant="contained"
+                      color="primary"
+                      startIcon={<Wallet />}
+                      onClick={() => handleGenerateWallet()}
+                      sx={{ mb: 2 }}
+                    >
+                      Generate New Wallet
+                    </LoadingButton>
+                  )}
                 </Grid>
               )}
             </Grid>

