@@ -7,7 +7,7 @@ const config = require('../../config/config');
 
 module.exports = {
 
-    getAll: async (req, res) => {
+    getAll: async (req, res) => {   
         let reqObj = req.query;
         log.info('Recieved request for getAll Deposits:', reqObj);
         let responseData = {};

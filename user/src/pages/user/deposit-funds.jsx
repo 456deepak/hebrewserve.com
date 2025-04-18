@@ -495,7 +495,7 @@ export default function DepositFunds() {
                           ? 'Payment Processed'
                           : cooldownActive && !monitoringLoading
                             ? 'Please Wait...'
-                            : 'Payment Done'}
+                            : 'Click Here to Update Payment Status'}
                       </LoadingButton>
                     </Grid>
                   </Grid>

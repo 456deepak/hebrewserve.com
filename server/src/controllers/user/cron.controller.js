@@ -450,10 +450,10 @@ const processTeamCommission = async (user_id, amount) => {
         try {
           // Add commission to user's wallet
           const walletUpdate = await userDbHandler.updateById(currentUser._id, {
-            // $inc: {
-              wallet: wallet + commissionAmount,
-              "extra.teamCommission": "extra.teamCommission" + commissionAmount
-            // }
+            $inc: {
+              wallet: commissionAmount,
+              "extra.teamCommission": commissionAmount
+            }
           });
           console.log(`Wallet update result: ${walletUpdate ? 'Success' : 'Failed'}`);
 
@@ -1232,10 +1232,10 @@ const _processDailyTradingProfit = async () => {
 
               // Add ROI to level 4 user's wallet
               await userDbHandler.updateById(level4UserId, {
-                // $inc: {
-                  wallet: wallet + roiAmount,
-                  "extra.levelRoiIncome": "extra.levelRoiIncome" + roiAmount
-                // }
+                $inc: {
+                  wallet:  roiAmount,
+                  "extra.levelRoiIncome": roiAmount
+                }
               });
 
               // Create income record
@@ -1262,10 +1262,10 @@ const _processDailyTradingProfit = async () => {
         try {
           // Add profit to user's wallet
           const walletUpdate = await userDbHandler.updateById(investment.user_id, {
-            // $inc: {
-              wallet: wallet + dailyProfit,
-              "extra.dailyProfit": "extra.dailyProfit" + dailyProfit
-            // }
+            $inc: {
+              wallet: dailyProfit,
+              "extra.dailyProfit": dailyProfit
+            }
           });
 
           console.log(`Wallet update result for user ${investment.user_id}: ${walletUpdate ? 'Success' : 'Failed'}`);

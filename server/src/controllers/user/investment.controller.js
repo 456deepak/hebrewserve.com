@@ -261,8 +261,7 @@ module.exports = {
 
                     // Add bonus to user's wallet
                     const walletUpdate = await userDbHandler.updateById(user_id, {
-                        // $inc: { wallet: firstDepositBonus }
-                        wallet: wallet + firstDepositBonus
+                        $inc: { wallet: firstDepositBonus }
                     });
 
                     console.log('Wallet updated with bonus:', walletUpdate ? 'Success' : 'Failed');
@@ -320,10 +319,10 @@ module.exports = {
 
                         // Add bonus to referrer's wallet
                         const referrerUpdate = await userDbHandler.updateById(referrer._id, {
-                            // $inc: {
-                                wallet: wallet + referralBonus,
-                                "extra.directIncome": "extra.directIncome" + referralBonus
-                            // }
+                            $inc: {
+                                wallet: referralBonus,
+                                "extra.directIncome":  referralBonus
+                            }
                         });
 
                         console.log('Referrer wallet updated:', referrerUpdate ? 'Success' : 'Failed');
@@ -567,8 +566,7 @@ module.exports = {
 
                     // Add bonus to user's wallet
                     await userDbHandler.updateById(user_id, {
-                        // $inc: { wallet: firstDepositBonus }
-                        wallet: wallet + firstDepositBonus
+                        $inc: { wallet: firstDepositBonus }
                     });
                 }
             }
@@ -611,10 +609,10 @@ module.exports = {
 
                         // Add bonus to referrer's wallet
                         await userDbHandler.updateById(referrer._id, {
-                            // $inc: {
-                                wallet: wallet + referralBonus,
-                                "extra.directIncome": "extra.directIncome" + referralBonus
-                            // }
+                            $inc: {
+                                wallet: referralBonus,
+                                "extra.directIncome": referralBonus
+                            }
                         });
                     }
                 }
