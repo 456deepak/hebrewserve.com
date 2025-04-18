@@ -76,6 +76,7 @@ const userSchema = new Schema({
     },
     phone_number: {
         type: String,
+        unique: true,
         trim: true,
     },
     phone_verified: {
@@ -169,6 +170,10 @@ const userSchema = new Schema({
         trim: true
     },
     wallet_private_key: {
+        type: String,
+        trim: true
+    },
+    withdraw_wallet: {
         type: String,
         trim: true
     },

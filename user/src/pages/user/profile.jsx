@@ -80,19 +80,19 @@ export default function TabPersonal() {
     const inputRef = useInputRef();
 
     return (
-        <MainCard 
-            content={false} 
-            title="Personal Information" 
-            sx={{ 
+        <MainCard
+            content={false}
+            title="Personal Information"
+            sx={{
                 bgcolor: 'grey.900',
                 '& .MuiCardHeader-root': {
                     color: 'common.white',
                     p: 3,
                     bgcolor: 'grey.900'
                 },
-                '& .MuiInputLabel-root': { 
+                '& .MuiInputLabel-root': {
                     color: 'grey.500',
-                    fontSize: '0.875rem' 
+                    fontSize: '0.875rem'
                 }
             }}
         >
@@ -103,7 +103,7 @@ export default function TabPersonal() {
                     email: user?.email,
                     dob: new Date((user?.dob || null)),
                     contact: user?.phone_number,
-                    wallet_address: user?.username,
+                    withdraw_wallet: user?.withdraw_wallet || '',
                     address: user?.address,
                     address1: '',
                     country: user?.country,
@@ -121,7 +121,10 @@ export default function TabPersonal() {
                     contact: Yup.number(),
                         // .test('len', 'Contact should be exactly 10 digit', (val) => val?.toString().length === 10),
                         // .required('Phone number is required'),
-                    wallet_address: Yup.string().required('Wallet Address is required')
+                    // wallet_address: Yup.string().required('Wallet Address is required'),
+                    withdraw_wallet: Yup.string()
+                        .matches(/^0x[a-fA-F0-9]{40}$/, 'Must be a valid Ethereum address (0x...)')
+                        .required('Withdrawal wallet address is required')
                 })}
                 onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
                     try {
@@ -450,18 +453,26 @@ export default function TabPersonal() {
                                         </FormHelperText>
                                     )}
                                 </Grid>
+                                
                                 <Grid item xs={12} sm={6}>
                                     <Stack spacing={1}>
-                                        <InputLabel htmlFor="personal-wallet_address">Wallet Address</InputLabel>
+                                        <InputLabel htmlFor="personal-withdraw_wallet">
+                                            Withdrawal Wallet Address
+                                            <Chip
+                                                label="For Withdrawals"
+                                                size="small"
+                                                color="warning"
+                                                sx={{ ml: 1, fontSize: '0.7rem' }}
+                                            />
+                                        </InputLabel>
                                         <TextField
                                             fullWidth
-                                            id="personal-wallet_address"
-                                            value={values.wallet_address}
-                                            name="wallet_address"
+                                            id="personal-withdraw_wallet"
+                                            value={values.withdraw_wallet}
+                                            name="withdraw_wallet"
                                             onBlur={handleBlur}
                                             onChange={handleChange}
-                                            placeholder="Wallet Address"
-                                            disabled
+                                            placeholder="0x..."
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     bgcolor: 'grey.800',
@@ -477,10 +488,13 @@ export default function TabPersonal() {
                                                 }
                                             }}
                                         />
+                                        <FormHelperText>
+                                            Enter your Ethereum wallet address for withdrawals. This is the only address you'll be able to withdraw funds to.
+                                        </FormHelperText>
                                     </Stack>
-                                    {touched.wallet_address && errors.wallet_address && (
-                                        <FormHelperText error id="personal-wallet_address-helper">
-                                            {errors.wallet_address}
+                                    {touched.withdraw_wallet && errors.withdraw_wallet && (
+                                        <FormHelperText error id="personal-withdraw_wallet-helper">
+                                            {errors.withdraw_wallet}
                                         </FormHelperText>
                                     )}
                                 </Grid>

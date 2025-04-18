@@ -129,7 +129,15 @@ module.exports = {
         try {
             let user = await userDbHandler.getById(user_id);
             let amount = parseFloat(reqObj.amount);
-            let address = reqObj?.address ? reqObj?.address : user.username;
+
+            // Check if user has set a withdrawal wallet
+            if (!user.withdraw_wallet) {
+                responseData.msg = 'Please set a withdrawal wallet address in your profile before making a withdrawal';
+                return responseHelper.error(res, responseData);
+            }
+
+            // Use the user's registered withdrawal wallet
+            let address = user.withdraw_wallet;
 
             // Check if user has sufficient balance
             if (user?.wallet < amount) {

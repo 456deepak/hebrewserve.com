@@ -331,6 +331,7 @@ module.exports = {
                 dob: reqObj?.dob,
                 phone_number: reqObj?.phone_number,
                 wallet_address: reqObj?.wallet_address,
+                withdraw_wallet: reqObj?.withdraw_wallet,
                 country: reqObj?.country,
                 country_code: reqObj?.country_code,
                 state: reqObj?.state,

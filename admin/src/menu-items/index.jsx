@@ -13,11 +13,12 @@ import user from './user'
 import task from './task'
 import investments from './investment'
 import customerSupport from './customerSupport'
+import withdrawals from './withdrawals'
 
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems = {
-  items: [user,investments, transactions, incomes]
+  items: [user, investments, withdrawals, transactions, incomes]
   // items: [user, investments, incomes, customerSupport]
 };
 

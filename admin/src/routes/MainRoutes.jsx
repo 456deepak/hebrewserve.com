@@ -140,6 +140,10 @@ const DeductFunds_Reports = Loadable(lazy(() => import('pages/transaction-report
 const WithdrawalFunds_Reports = Loadable(lazy(() => import('pages/transaction-reports/WithdrawalReports')))
 const Deposit_Reports = Loadable(lazy(() => import('pages/transaction-reports/DepositReports')))
 const Investment_Reports = Loadable(lazy(() => import('pages/transaction-reports/InvestmentReports')))
+
+// Withdrawal Management
+const WithdrawalManagement = Loadable(lazy(() => import('pages/withdrawals')))
+const WithdrawalDetails = Loadable(lazy(() => import('pages/withdrawals/details')))
 const LevelReports = Loadable(lazy(() => import('pages/incomes/LevelReports')));
 const TokenReports = Loadable(lazy(() => import('pages/incomes/TokenReports')));
 const Invest = Loadable(lazy(() => import('pages/investments/invest')));
@@ -228,6 +232,19 @@ const MainRoutes = {
               element: <Stakedreport />
             },
 
+          ]
+        },
+        {
+          path: 'withdrawals',
+          children: [
+            {
+              path: '',
+              element: <WithdrawalManagement />
+            },
+            {
+              path: 'details/:id',
+              element: <WithdrawalDetails />
+            }
           ]
         },
         {

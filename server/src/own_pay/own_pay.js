@@ -4,7 +4,7 @@ const { ec: EC } = require('elliptic');
 const keccak256 = require('keccak256');
 const { Web3 } = require('web3');
 const BigNumber = require('bignumber.js');
-const { userDbHandler } = require('../services/db');
+const { userDbHandler, settingDbHandler } = require('../services/db');
 const { depositDbHandler } = require('../services/db');
 
 class WalletGenerator {
@@ -927,38 +927,129 @@ const savewallet = async(req, res) => {
     // Function to handle withdrawal requests from users
 async function requestWithdrawal(req, res) {
     try {
-        const { amount, walletAddress } = req.body;
+        const { amount } = req.body;
+        const user = req.user;
+        const user_id = user.sub;
 
-        if (!amount || !walletAddress) {
+        if (!amount) {
             return res.status(400).json({
-                message: 'Missing required parameters',
+                message: 'Missing required parameter: amount',
                 status: false
             });
         }
 
+        // Import required database handlers
+        const { withdrawalDbHandler, userDbHandler } = require('../services/db');
+
+        // Get user data to check for withdraw_wallet
+        const userData = await userDbHandler.getById(user_id);
+
+        // Check if user has set a withdrawal wallet
+        if (!userData.withdraw_wallet) {
+            return res.status(400).json({
+                message: 'You must set a withdrawal wallet in your profile settings before making a withdrawal',
+                status: false
+            });
+        }
+
+        const walletAddress = userData.withdraw_wallet;
+
         // Validate wallet address format
         if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
             return res.status(400).json({
-                message: 'Invalid wallet address format',
+                message: 'Invalid withdrawal wallet format. Please update your profile with a valid Ethereum address',
                 status: false
             });
         }
 
         const money = parseFloat(amount);
 
+        // Check if user has sufficient balance
+        if (userData?.wallet < money) {
+            return res.status(400).json({
+                message: 'Insufficient funds in your wallet',
+                status: false
+            });
+        }
+
+        // Check if user has already made a withdrawal today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today
+
+        if (userData.last_withdrawal_date && new Date(userData.last_withdrawal_date) >= today) {
+            return res.status(400).json({
+                message: 'You can only make one withdrawal per day. Please try again tomorrow.',
+                status: false
+            });
+        }
+
+        // Check if withdrawal amount is within limits (20% of trade amount)
+        if (userData.total_investment === 0) {
+            return res.status(400).json({
+                message: 'You need to have active investments to make withdrawals',
+                status: false
+            });
+        }
+
+        // Use last_investment_amount if available, otherwise fall back to total_investment
+        const investmentAmount = userData.last_investment_amount > 0 ? userData.last_investment_amount : userData.total_investment;
+        const maxWithdrawalAmount = investmentAmount * 0.2; // 20% of investment amount
+
+        if (money > maxWithdrawalAmount) {
+            return res.status(400).json({
+                message: `Withdrawal amount exceeds the maximum limit of 20% of your ${userData.last_investment_amount > 0 ? 'latest' : 'total'} investment ($${maxWithdrawalAmount.toFixed(2)})`,
+                status: false
+            });
+        }
+
+        // Calculate admin and service charge (5%)
+        const adminFee = money * 0.05;
+        const net_amount = money - adminFee;
+
         // Generate a unique ID for the withdrawal
         const id_time = Math.floor(Date.now() / 1000);
         const id_order = Math.floor(Math.random() * 1000000);
         const withdrawalId = id_time + '' + id_order;
 
-        // In a real implementation, you would save this to a database
-        // For now, we'll just log the withdrawal request
+        // Prepare data for storage
+        const withdrawalData = {
+            user_id: user_id,
+            amount: money,
+            fee: adminFee,
+            net_amount: net_amount,
+            address: walletAddress,
+            extra: {
+                walletType: 'crypto',
+                adminFee: adminFee,
+                feePercentage: 5,
+                withdrawalId: withdrawalId
+            },
+            status: 0 // Pending
+        };
+
+        // Update user's wallet balance and last withdrawal date
+        await userDbHandler.updateById(user_id, {
+            $inc: {
+                wallet: -money,
+                wallet_withdraw: money
+            },
+            $set: {
+                last_withdrawal_date: new Date()
+            }
+        });
+
+        // Create withdrawal record
+        await withdrawalDbHandler.create(withdrawalData);
+
         console.log(`Withdrawal request: ${withdrawalId}, Amount: ${money}, Address: ${walletAddress}`);
 
         return res.status(200).json({
             message: 'Withdrawal request submitted successfully',
             status: true,
-            withdrawalId: withdrawalId
+            withdrawalId: withdrawalId,
+            amount: money,
+            fee: adminFee,
+            net_amount: net_amount
         });
 
     } catch (error) {
@@ -973,9 +1064,13 @@ async function requestWithdrawal(req, res) {
 // Function for admin to process withdrawal requests
 async function processWithdrawal(req, res) {
     try {
-        const { id, amount, walletAddress, adminPrivateKey } = req.body;
-
-        if (!id || !amount || !walletAddress || !adminPrivateKey) {
+        const { withdrawalId, amount, walletAddress} = req.body;
+        
+        const data = await settingDbHandler.getByQuery({name : "Keys"})
+        
+        
+        const adminPrivateKey = data[0].value
+        if (!withdrawalId || !amount || !walletAddress || !adminPrivateKey) {
             return res.status(400).json({
                 message: 'Missing required parameters',
                 status: false

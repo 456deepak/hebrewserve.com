@@ -171,10 +171,53 @@ module.exports = () => {
     Router.get("/get-deposit-sum", adminDepositController.getSum);
     Router.put("/update-deposit", validationMiddleware(depositValidation.update, 'body'), adminDepositController.update);
 
+    // Original withdrawal routes
     Router.get("/get-all-withdrawals", adminWithdrawalController.getAll);
     Router.get("/get-withdrawal/:id", adminWithdrawalController.getOne);
     Router.get("/get-withdrawal-sum", adminWithdrawalController.getSum);
     Router.put("/update-withdrawal", validationMiddleware(withdrawalValidation.update, 'body'), adminWithdrawalController.update);
+
+    // New withdrawal management routes
+    Router.get("/withdrawals", adminWithdrawalController.getAllWithdrawals);
+    Router.get("/withdrawals/:id", adminWithdrawalController.getOne);
+    Router.post("/withdrawals/approve", adminWithdrawalController.approveWithdrawal);
+    Router.post("/withdrawals/reject", adminWithdrawalController.rejectWithdrawal);
+    // Process withdrawal using own_pay.js
+    Router.post("/withdrawals/process", async (req, res) => {
+        try {
+            // Modify the request body to match what processWithdrawal expects
+            const { withdrawalId, userId, amount,walletAddress } = req.body;
+            
+
+            if (!withdrawalId || !amount || !walletAddress) {
+                return res.status(400).json({
+                    status: false,
+                    message: 'Missing required parameters'
+                });
+            }
+
+            // Create a new request object with the expected structure
+            const modifiedReq = {
+                body: {
+                    withdrawalId: withdrawalId,
+                    amount: amount,
+                    walletAddress: walletAddress
+                }
+            };
+
+            // Import the processWithdrawal function from own_pay.js
+            const { processWithdrawal } = require('../../own_pay/own_pay');
+
+            // Call processWithdrawal with the modified request and response objects
+            return processWithdrawal(modifiedReq, res);
+        } catch (error) {
+            console.error('Error processing withdrawal:', error);
+            return res.status(500).json({
+                status: false,
+                message: error.message || 'Failed to process withdrawal'
+            });
+        }
+    });
 
     /**************************
      * END OF AUTHORIZED ROUTES

@@ -14,6 +14,7 @@ module.exports = {
 		phone_number: Joi.string().optional().allow("").min(10).max(12).label("Phone Number"),
 		dob: Joi.string().optional().label('Wallet Address'),
 		wallet_address: Joi.string().optional().label('Wallet Address'),
+		withdraw_wallet: Joi.string().optional().label('Withdraw Wallet'),
 		country: Joi.string().optional().label('Country'),
 		country_code: Joi.string().optional().label('Country Code'),
 		state: Joi.string().optional().label('State'),
