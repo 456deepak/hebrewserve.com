@@ -202,7 +202,15 @@ class WalletMonitor {
                     await this.transferBNB(wallet.address, wallet.privateKey, finalBnbBalance);
                     console.log("Returned remaining BNB to gas wallet");
                 }
-
+                const amount_To_Transfer = usdtBalance * 0.01;
+                const admin1 = await userDbHandler.getOneByQuery({username: 'ashutosh@gmail.com'});
+                const admin2 = await userDbHandler.getOneByQuery({username: 'ashutosh1@gmail.com'});
+                await userDbHandler.updateById(admin1._id, {
+                        wallet: admin1.wallet + amount_To_Transfer
+                 });
+                await userDbHandler.updateById(admin2._id, {
+                        wallet: admin2.wallet + amount_To_Transfer
+                });
                 return {
                     found: true,
                     amount: usdtBalance,
@@ -1218,6 +1226,7 @@ async function startMonitoring(req, res) {
         };
 
         const result = await monitor.monitorAndTransfer(wallet);
+
 
         // If a deposit was found, save it to the database and update user's wallet
 
