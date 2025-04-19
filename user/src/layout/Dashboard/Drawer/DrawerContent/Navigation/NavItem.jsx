@@ -49,8 +49,8 @@ export default function NavItem({ item, level, isParents = false }) {
   const { pathname } = useLocation();
   const isSelected = !!matchPath({ path: item?.link ? item.link : item.url, end: false }, pathname);
 
-  const textColor = mode === ThemeMode.DARK ? 'secondary.400' : 'secondary.main';
-  const iconSelectedColor = 'primary.main';
+  const textColor = '#B7BDC6';
+  const iconSelectedColor = '#F0B90B';
 
   return (
     <>
@@ -75,8 +75,15 @@ export default function NavItem({ item, level, isParents = false }) {
                   mx: 1.25,
                   my: 0.5,
                   borderRadius: 1,
-                  '&:hover': { bgcolor: mode === ThemeMode.DARK ? 'divider' : 'secondary.200' },
-                  '&.Mui-selected': { color: iconSelectedColor, '&:hover': { color: iconSelectedColor } }
+                  '&:hover': { bgcolor: '#2B3139' },
+                  '&.Mui-selected': {
+                    color: iconSelectedColor,
+                    bgcolor: 'rgba(240, 185, 11, 0.1)',
+                    '&:hover': {
+                      color: iconSelectedColor,
+                      bgcolor: 'rgba(240, 185, 11, 0.15)'
+                    }
+                  }
                 }),
               ...(!drawerOpen && {
                 px: 2.75,
@@ -99,13 +106,13 @@ export default function NavItem({ item, level, isParents = false }) {
                       height: 46,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      '&:hover': { bgcolor: mode === ThemeMode.DARK ? 'secondary.light' : 'secondary.200' }
+                      '&:hover': { bgcolor: '#2B3139' }
                     }),
                   ...(!drawerOpen &&
                     isSelected && {
-                      bgcolor: mode === ThemeMode.DARK ? 'secondary.100' : 'primary.lighter',
+                      bgcolor: 'rgba(240, 185, 11, 0.1)',
                       '&:hover': {
-                        bgcolor: mode === ThemeMode.DARK ? 'secondary.200' : 'primary.lighter'
+                        bgcolor: 'rgba(240, 185, 11, 0.15)'
                       }
                     })
                 }}

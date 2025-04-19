@@ -6,9 +6,9 @@ import Drawer from '@mui/material/Drawer';
 import { DRAWER_WIDTH, MINI_DRAWER_WIDTH, ThemeMode } from 'config';
 
 const openedMixin = (theme) => ({
-  backgroundColor: theme.palette.background.default,
+  backgroundColor: '#1E2026',
   width: DRAWER_WIDTH,
-  borderRight: `1px dashed ${theme.palette.mode === ThemeMode.DARK ? theme.palette.secondary[200] : theme.palette.secondary[400]}`,
+  borderRight: '1px solid #2B3139',
 
   transition: theme.transitions.create('width', {
     easing: theme.transitions.easing.sharp,
@@ -16,12 +16,12 @@ const openedMixin = (theme) => ({
   }),
 
   overflowX: 'hidden',
-  boxShadow: theme.palette.mode === ThemeMode.DARK ? theme.customShadows.z1 : 'none'
+  boxShadow: 'none'
 });
 
 const closedMixin = (theme) => ({
   overflow: 'hidden',
-  backgroundColor: theme.palette.background.default,
+  backgroundColor: '#1E2026',
 
   transition: theme.transitions.create('width', {
     easing: theme.transitions.easing.sharp,
@@ -31,7 +31,7 @@ const closedMixin = (theme) => ({
   overflowX: 'hidden',
   width: MINI_DRAWER_WIDTH,
   borderRight: 'none',
-  boxShadow: theme.customShadows.z1
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
 });
 
 // ==============================|| DRAWER - MINI STYLED ||============================== //
