@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 const config = require('../../config/config');
 const jwtService = require('../../services/jwt');
 const responseHelper = require('../../utils/customResponse');
-const { levelIncome } = require('./cron.controller');
+const { levelIncome, hasUserInvested } = require('./cron.controller');
 const { userModel } = require('../../models');
 const { getChildLevelsByRefer } = require('../../services/commonFun');
 
@@ -424,6 +424,13 @@ module.exports = {
             console.log('User data:', userData);
             if (!userData) {
                 responseData.msg = 'User not found';
+                return responseHelper.error(res, responseData);
+            }
+
+            // Check if user has made an investment
+            const hasInvested = await hasUserInvested(id);
+            if (!hasInvested) {
+                responseData.msg = 'You need to make an investment before activating daily profit';
                 return responseHelper.error(res, responseData);
             }
 

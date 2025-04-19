@@ -26,6 +26,28 @@ const ObjectId = mongoose.Types.ObjectId;
 const contractABI = process.env.WITHDRAW_ABI;
 const contractAddress = process.env.WITHDRAW_ADDRESS
 
+// Utility function to check if a user has made an investment
+const hasUserInvested = async (userId) => {
+  try {
+    // First check the user's total_investment field
+    const user = await userDbHandler.getById(userId);
+    if (user && user.total_investment > 0) {
+      return true;
+    }
+
+    // As a fallback, check if the user has any active investments
+    const investments = await investmentDbHandler.getByQuery({
+      user_id: userId,
+      status: 'active'
+    });
+
+    return investments && investments.length > 0;
+  } catch (error) {
+    console.error(`Error checking if user ${userId} has invested:`, error);
+    return false; // Default to false in case of error
+  }
+};
+
 // Valid slot values for packages
 const validSlots = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096];
 
@@ -216,6 +238,13 @@ const distributeLevelIncome = async (user_id, amount, fromPackageLevel) => {
       if (!levelUser) continue;
       console.log("levelUser", levelUser);
 
+      // Check if the user has made an investment
+      const hasInvested = await hasUserInvested(levelUser);
+      if (!hasInvested) {
+        console.log(`User ${levelUser} has not made any investment. Skipping level income.`);
+        continue; // Skip to the next user
+      }
+
       const levelUsers = await userDbHandler.getOneByQuery({
         _id: ObjectId(topLevels[i]),
       });
@@ -325,6 +354,14 @@ const distributeGlobalAutoPoolMatrixIncome = async (user_id, amount, fromPackage
       });
       if (!placementUser) break;
 
+      // Check if the placement user has made an investment
+      const hasInvested = await hasUserInvested(currentPlacementId);
+      if (!hasInvested) {
+        console.log(`Placement user ${placementUser.username || placementUser.email} has not made any investment. Skipping matrix income.`);
+        currentPlacementId = placementUser.placement_id;
+        continue; // Skip to the next user
+      }
+
       // Get the placement user's highest package level using slot_value
       const userPackages = await investmentDbHandler.getByQuery({
         user_id: ObjectId(currentPlacementId),
@@ -345,14 +382,15 @@ const distributeGlobalAutoPoolMatrixIncome = async (user_id, amount, fromPackage
         continue;
       }
       // Distribute matrix income to the placement user
+      const auser = await userDbHandler.getById(currentPlacementId);
       await userDbHandler.updateOneByQuery(
         { _id: ObjectId(currentPlacementId) },
         {
-          $inc: {
-            wallet: matrixIncome,
-            "extra.matrixIncome": matrixIncome,
-            "extra.cappingLimit": -matrixIncome,
-          },
+          // $inc: {
+            wallet: auser.wallet + matrixIncome,
+            "extra.matrixIncome": auser.extra.matrixIncome + matrixIncome,
+            "extra.cappingLimit": auser.extra.cappingLimit - matrixIncome,
+          // },
         }
       );
 
@@ -414,6 +452,44 @@ const processTeamCommission = async (user_id, amount) => {
       console.log(`Current upline user: ${currentUser.username || currentUser.email} (ID: ${currentUser._id})`);
       console.log(`Current upline user's refer_id: ${currentUser.refer_id}`);
 
+      // Check if the upline user has made an investment
+      const hasInvested = await hasUserInvested(currentUser._id);
+      if (!hasInvested) {
+        console.log(`Upline user ${currentUser.username || currentUser.email} has not made any investment. Skipping commission.`);
+
+        // Move to the next level (upline)
+        if (currentUser.refer_id) {
+          // Check if refer_id is a string 'admin' - this is a special case
+          if (currentUser.refer_id === 'admin') {
+            console.log(`Found special 'admin' refer_id. Looking up admin user...`);
+            // Try to find the admin user with ID 678f9a82a2dac325900fc47e
+            const adminUser = await userDbHandler.getOneByQuery({ _id: "678f9a82a2dac325900fc47e" });
+            if (adminUser) {
+              console.log(`Found admin user: ${adminUser.username || adminUser.email} (ID: ${adminUser._id})`);
+              currentUser = adminUser;
+            } else {
+              console.log(`Admin user not found. Breaking out of loop.`);
+              break;
+            }
+          } else {
+            // Normal case - refer_id is an ObjectId
+            const nextUser = await userDbHandler.getById(currentUser.refer_id);
+            console.log(`Moving to next level. Next upline user: ${nextUser ? (nextUser.username || nextUser.email) : 'None'} (ID: ${nextUser?._id})`);
+            if (nextUser) {
+              currentUser = nextUser;
+            } else {
+              console.log(`Next upline user not found. Breaking out of loop.`);
+              break;
+            }
+          }
+        } else {
+          console.log(`No more upline users. Breaking out of loop.`);
+          break;
+        }
+        level++;
+        continue; // Skip to the next iteration
+      }
+
       // Check if the user has enough direct referrals for this level
       const directReferrals = await userDbHandler.getByQuery({ refer_id: currentUser._id });
       console.log(`Current upline user has ${directReferrals.length} direct referrals`);
@@ -446,14 +522,16 @@ const processTeamCommission = async (user_id, amount) => {
         const commissionAmount = (dailyIncome * commissionPercentage) / 100;
         console.log(`Commission percentage: ${commissionPercentage}%`);
         console.log(`Commission amount: $${commissionAmount.toFixed(4)} (${commissionPercentage}% of $${dailyIncome.toFixed(2)})`);
-
+        const auser2 = await userDbHandler.getByQuery({_id: currentUser._id});
+        if(hasInvested && auser2.dailyProfitActivated){
         try {
           // Add commission to user's wallet
+          const auser = await userDbHandler.getById(currentUser._id);
           const walletUpdate = await userDbHandler.updateById(currentUser._id, {
-            $inc: {
-              wallet: commissionAmount,
-              "extra.teamCommission": commissionAmount
-            }
+            // $inc: {
+              wallet: auser.wallet + commissionAmount,
+              "extra.teamCommission": auser.extra.teamCommission + commissionAmount
+            // }
           });
           console.log(`Wallet update result: ${walletUpdate ? 'Success' : 'Failed'}`);
 
@@ -475,6 +553,7 @@ const processTeamCommission = async (user_id, amount) => {
           console.log(`Income record created: ${incomeRecord ? 'Success' : 'Failed'} (ID: ${incomeRecord?._id})`);
         } catch (updateError) {
           console.error(`Error updating wallet or creating income record: ${updateError.message}`);
+          }
         }
       } else {
         console.log(`User does not have enough direct referrals (${directReferrals.length} < ${requiredDirects}). Skipping commission.`);
@@ -749,8 +828,8 @@ const _processUserRanks = async () => {
 // API endpoint for processing user ranks
 const processUserRanks = async (req, res) => {
   try {
-    // console.log("Processing user ranks...");
-    // console.log("Request body:", req.body);
+    console.log("Processing user ranks...");
+    console.log("Request body:", req.body);
 
     // Check if API key is provided and valid
     if (!req.body.key) {
@@ -935,6 +1014,9 @@ const _processTeamRewards = async () => {
 
     for (const reward of pendingRewards) {
       // Create income entry for the reward
+      const hasInvested = await hasUserInvested(reward.user_id)
+      if(hasInvested){
+      
       const incomeData = {
         user_id: reward.user_id,
         type: 'team_reward',
@@ -960,7 +1042,7 @@ const _processTeamRewards = async () => {
         status: 'completed',
         remarks: `Reward of $${reward.reward_amount} credited to wallet`
       });
-
+     }
       log.info(`Processed team reward for user ${user.username}`);
     }
 
@@ -1058,6 +1140,13 @@ const _processActiveMemberReward = async () => {
       // console.log(`Checking ${plan.active_member_rewards.length} reward levels...`);
 
       // Check if user qualifies for any reward level
+      // Check if the user has made an investment
+      const hasInvested = await hasUserInvested(user._id);
+      if (!hasInvested) {
+        console.log(`User ${user.username || user.email} has not made any investment. Skipping active member reward.`);
+        continue; // Skip to the next user
+      }
+
       for (const rewardLevel of plan.active_member_rewards) {
         // console.log(`Checking reward level: ${rewardLevel.direct} direct, ${rewardLevel.team} team, $${rewardLevel.reward} reward`);
 
@@ -1315,6 +1404,7 @@ const _processDailyTradingProfit = async () => {
 
         try {
           // Process team commissions for this user's total investment
+
           const teamCommissionResult = await processTeamCommission(user._id, user.total_investment);
           console.log(`Team commission processing result: ${teamCommissionResult ? 'Success' : 'Failed'}`);
         } catch (commissionError) {
@@ -1511,5 +1601,6 @@ module.exports = {
   processDailyTradingProfit,
   processUserRanks,
   processTeamRewards,
-  resetDailyLoginCounters
+  resetDailyLoginCounters,
+  hasUserInvested // Export the utility function to check if a user has invested
 };
