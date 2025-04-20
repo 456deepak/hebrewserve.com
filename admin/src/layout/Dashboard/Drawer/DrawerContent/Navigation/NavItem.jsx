@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
-import { matchPath, useLocation, Link } from 'react-router-dom';
+import { matchPath, useLocation, Link, useNavigate } from 'react-router-dom';
+import { debouncedNavigate } from 'utils/navigationUtils';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -25,10 +26,22 @@ import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 export default function NavItem({ item, level, isParents = false }) {
   const theme = useTheme();
   const downLG = useMediaQuery(theme.breakpoints.down('lg'));
+  const navigate = useNavigate();
 
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
   const { mode, menuOrientation } = useConfig();
+
+  // Handle navigation with debounce
+  const handleNavigation = (e) => {
+    e.preventDefault();
+    if (item.url) {
+      debouncedNavigate(navigate, item.url);
+      if (downLG) {
+        handlerDrawerOpen(false);
+      }
+    }
+  };
 
   let itemTarget = '_self';
   if (item.target) {
@@ -57,8 +70,9 @@ export default function NavItem({ item, level, isParents = false }) {
       {menuOrientation === MenuOrientation.VERTICAL || downLG ? (
         <Box sx={{ position: 'relative' }}>
           <ListItemButton
-            component={Link}
-            to={item.url}
+            component="a"
+            href={item.url}
+            onClick={handleNavigation}
             target={itemTarget}
             disabled={item.disabled}
             selected={isSelected}
@@ -85,7 +99,6 @@ export default function NavItem({ item, level, isParents = false }) {
                 '&.Mui-selected': { '&:hover': { bgcolor: 'transparent' }, bgcolor: 'transparent' }
               })
             }}
-            {...(downLG && { onClick: () => handlerDrawerOpen(false) })}
           >
             {itemIcon && (
               <ListItemIcon
@@ -188,8 +201,9 @@ export default function NavItem({ item, level, isParents = false }) {
         </Box>
       ) : (
         <ListItemButton
-          component={Link}
-          to={item.url}
+          component="a"
+          href={item.url}
+          onClick={handleNavigation}
           target={itemTarget}
           disabled={item.disabled}
           selected={isSelected}

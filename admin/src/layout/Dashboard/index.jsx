@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 
 // material-ui
@@ -7,6 +7,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Toolbar from '@mui/material/Toolbar';
+import { CircularProgress, Typography } from '@mui/material';
 
 // project-imports
 import Drawer from './Drawer';
@@ -17,6 +18,8 @@ import Loader from 'components/Loader';
 import AddCustomer from 'sections/apps/customer/AddCustomer';
 import Breadcrumbs from 'components/@extended/Breadcrumbs';
 import AuthGuard from 'utils/route-guard/AuthGuard';
+import ErrorBoundary from 'components/ErrorBoundary';
+import PageLoadingIndicator from 'components/PageLoadingIndicator';
 
 import { DRAWER_WIDTH, MenuOrientation } from 'config';
 import useConfig from 'hooks/useConfig';
@@ -48,6 +51,7 @@ export default function MainLayout() {
   return (
     <AuthGuard>
       <Box sx={{ display: 'flex', width: '100%' }}>
+        <PageLoadingIndicator />
         <Header />
         {!isHorizontal ? <Drawer /> : <HorizontalBar />}
 
@@ -65,7 +69,9 @@ export default function MainLayout() {
             }}
           >
             <Breadcrumbs />
-            <Outlet />
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
             <Footer />
           </Container>
         </Box>

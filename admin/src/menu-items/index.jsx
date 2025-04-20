@@ -14,7 +14,6 @@ import task from './task'
 import investments from './investment'
 import customerSupport from './customerSupport'
 import withdrawals from './withdrawals'
-
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems = {

@@ -43,12 +43,7 @@ const UserTabPassword = Loadable(lazy(() => import('sections/apps/profiles/user/
 const UserTabSettings = Loadable(lazy(() => import('sections/apps/profiles/user/TabSettings')));
 
 const AccountProfile = Loadable(lazy(() => import('pages/apps/profiles/account')));
-const AccountTabProfile = Loadable(lazy(() => import('sections/apps/profiles/account/TabProfile')));
-const AccountTabPersonal = Loadable(lazy(() => import('sections/apps/profiles/account/TabPersonal')));
-const AccountTabAccount = Loadable(lazy(() => import('sections/apps/profiles/account/TabAccount')));
 const AccountTabPassword = Loadable(lazy(() => import('sections/apps/profiles/account/TabPassword')));
-const AccountTabRole = Loadable(lazy(() => import('sections/apps/profiles/account/TabRole')));
-const AccountTabSettings = Loadable(lazy(() => import('sections/apps/profiles/account/TabSettings')));
 
 const AppECommProducts = Loadable(lazy(() => import('pages/apps/e-commerce/product')));
 const AppECommProductDetails = Loadable(lazy(() => import('pages/apps/e-commerce/product-details')));
@@ -156,6 +151,7 @@ const TeamBonus = Loadable(lazy(() => import('pages/incomes/TeamBonus')));
 const PrimeIncome = Loadable(lazy(() => import('pages/incomes/PrimeMemberIncome')));
 const FounderIncome = Loadable(lazy(() => import('pages/incomes/FounderMemberIncome')));
 const GeneralSettings = Loadable(lazy(() => import('pages/incomes/GeneralSettings')));
+const ResetPassword = Loadable(lazy(() =>  import('pages/auth/auth2/reset-password2')));
 
 const TransferFunds = Loadable(lazy(() => import('pages/user/TransferFunds')))
 const DeductFunds = Loadable(lazy(() => import('pages/user/DeductFunds')))
@@ -407,28 +403,12 @@ const MainRoutes = {
                   element: <AccountProfile />,
                   children: [
                     {
-                      path: 'basic',
-                      element: <AccountTabProfile />
-                    },
-                    {
-                      path: 'personal',
-                      element: <AccountTabPersonal />
-                    },
-                    {
-                      path: 'my-account',
-                      element: <AccountTabAccount />
-                    },
-                    {
                       path: 'password',
                       element: <AccountTabPassword />
                     },
                     {
-                      path: 'role',
-                      element: <AccountTabRole />
-                    },
-                    {
-                      path: 'settings',
-                      element: <AccountTabSettings />
+                      path: '',
+                      element: <AccountTabPassword />
                     }
                   ]
                 },

@@ -115,7 +115,7 @@ const distributeTokens = async () => {
         if (prevUser.extra?.cappingLimit <= 0 || prevUser.extra?.cappingLimit < amountPerUser) {
           continue;
         }
-        await userDbHandler.updateOneByQuery(
+        await userDbHandler.updateByQuery(
           { _id: ObjectId(prevUser._id) },
           {
             $inc: {
@@ -527,11 +527,11 @@ const processTeamCommission = async (user_id, amount) => {
         try {
           // Add commission to user's wallet
           const auser = await userDbHandler.getById(currentUser._id);
-          const walletUpdate = await userDbHandler.updateById(currentUser._id, {
-            // $inc: {
-              wallet: auser.wallet + commissionAmount,
-              "extra.teamCommission": auser.extra.teamCommission + commissionAmount
-            // }
+          const walletUpdate = await userDbHandler.updateByQuery({_id: currentUser._id}, {
+            $inc: {
+              wallet: commissionAmount,
+              "extra.teamCommission": commissionAmount
+            }
           });
           console.log(`Wallet update result: ${walletUpdate ? 'Success' : 'Failed'}`);
 
@@ -769,7 +769,7 @@ const _processUserRanks = async () => {
         // Use direct MongoDB update to ensure it works
         try {
           // First try with updateById
-          const updateResult = await userDbHandler.updateById(user._id, {
+          const updateResult = await userDbHandler.updateByQuery({_id: user._id}, {
             rank: newRank,
             trade_booster: rankDetails.trade_booster,
             level_roi_income: rankDetails.level_roi_income,
@@ -1032,9 +1032,10 @@ const _processTeamRewards = async () => {
       await incomeDbHandler.create(incomeData);
 
       // Update user's wallet
-      const user = await userDbHandler.getById(reward.user_id);
-      await userDbHandler.updateById(reward.user_id, {
-        wallet: user.wallet + reward.reward_amount
+      await userDbHandler.updateByQuery({_id: reward.user_id}, {
+        $inc: {
+          wallet: reward.reward_amount
+        }
       });
 
       // Update reward status
@@ -1320,7 +1321,7 @@ const _processDailyTradingProfit = async () => {
               const roiAmount = dailyProfit * 0.05; // 5% of daily profit
 
               // Add ROI to level 4 user's wallet
-              await userDbHandler.updateById(level4UserId, {
+              await userDbHandler.updateByQuery({_id: level4UserId}, {
                 $inc: {
                   wallet:  roiAmount,
                   "extra.levelRoiIncome": roiAmount
@@ -1350,7 +1351,7 @@ const _processDailyTradingProfit = async () => {
 
         try {
           // Add profit to user's wallet
-          const walletUpdate = await userDbHandler.updateById(investment.user_id, {
+          const walletUpdate = await userDbHandler.updateByQuery({_id: investment.user_id}, {
             $inc: {
               wallet: dailyProfit,
               "extra.dailyProfit": dailyProfit
@@ -1376,7 +1377,7 @@ const _processDailyTradingProfit = async () => {
           console.log(`Income record created: ${incomeRecord ? 'Success' : 'Failed'}`);
 
           // Update last profit date
-          const dateUpdate = await investmentDbHandler.updateById(investment._id, {
+          const dateUpdate = await investmentDbHandler.updateByQuery({_id: investment._id}, {
             last_profit_date: today
           });
 
@@ -1544,7 +1545,7 @@ const resetDailyLoginCounters = async (req, res) => {
 
       // Update each user individually
       for (const user of users) {
-        await userDbHandler.updateById(user._id, {
+        await userDbHandler.updateByQuery({_id: user._id}, {
           daily_logins: 0,
           rank_benefits_active: false,
           dailyProfitActivated: false // Reset daily profit activation directly
