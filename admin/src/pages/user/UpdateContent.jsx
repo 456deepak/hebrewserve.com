@@ -4,16 +4,17 @@ import Button from '@mui/material/Button';
 import InputLabel from '@mui/material/InputLabel';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
 
 // third-party
-import { Field, useFormik } from 'formik';
+import { useFormik } from 'formik';
 import * as yup from 'yup'
 
 // project-imports
 import MainCard from 'components/MainCard';
-import AnimateButton from 'components/@extended/AnimateButton';
 import { openSnackbar } from 'api/snackbar';
-import { FormControl, Input, MenuItem, Select } from '@mui/material';
 import axios from 'utils/axios';
 import LoadingButton from 'components/@extended/LoadingButton';
 import { useEffect, useState } from 'react';
@@ -35,15 +36,47 @@ export default function UpdateContent() {
 
     const [content, setContent] = useState()
 
-    useEffect(() => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-        (async () => {
-            let response = await axiosServices.get("/get-setting-with-name/content")
+    // Function to fetch content data
+    const fetchContentData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await axiosServices.get("/get-setting-with-name/content", {
+                timeout: 10000 // 10 seconds timeout
+            });
             if (response.status === 200) {
-                setContent(response.data?.result?.extra)
+                setContent(response.data?.result?.extra || {});
+            } else {
+                setError('Failed to fetch content data');
+                console.error('API Error:', response?.data);
             }
-        })();
+        } catch (err) {
+            setError(err.message || 'An error occurred while fetching content data');
+            console.error('Content data fetch error:', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
+    useEffect(() => {
+        // Set a flag to track if the component is mounted
+        let isMounted = true;
+
+        const loadData = async () => {
+            if (isMounted) {
+                await fetchContentData();
+            }
+        };
+
+        loadData();
+
+        // Cleanup function to prevent state updates on unmounted component
+        return () => {
+            isMounted = false;
+        };
     }, [])
 
     const formik = useFormik({
@@ -64,43 +97,74 @@ export default function UpdateContent() {
         validationSchema,
         enableReinitialize: true,
         onSubmit: async (data) => {
-            console.log(data)
-            setLoading(true)
+            console.log('Submitting form data:', data);
+            setLoading(true);
             try {
-
-                // triggering
+                // Add a timeout to the request to prevent hanging
                 const response = await axios.post('/update-content/', data, {
                     headers: {
                         'Accept-Language': 'en-US,en;q=0.8',
                         'accept': 'application/json',
                         'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
-                    }
-                })
-                if (response.status === 200)
+                    },
+                    timeout: 15000 // 15 seconds timeout
+                });
+
+                if (response.status === 200) {
                     openSnackbar({
                         open: true,
                         message: 'Content Saved Successfully',
                         variant: 'alert',
-
                         alert: {
                             color: 'success'
                         }
-                    })
+                    });
+
+                    // Refresh content data after successful update
+                    await fetchContentData();
+                } else {
+                    throw new Error(response.data?.message || 'Failed to update content');
+                }
             } catch (error) {
+                console.error('Content update error:', error);
                 openSnackbar({
                     open: true,
-                    message: error?.message || 'Something went wrong !!!',
+                    message: error?.response?.data?.message || error?.message || 'Something went wrong!',
                     variant: 'alert',
-
                     alert: {
                         color: 'error'
                     }
-                })
+                });
             } finally {
-                setLoading(false)
+                setLoading(false);
             }
         }
     });
+
+    // Show loading state
+    if (isLoading) {
+        return (
+            <MainCard>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh', flexDirection: 'column' }}>
+                    <CircularProgress />
+                    <Typography variant="h6" sx={{ mt: 2 }}>Loading content data...</Typography>
+                </Box>
+            </MainCard>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <MainCard>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh', flexDirection: 'column' }}>
+                    <Typography variant="h4" color="error" sx={{ mb: 2 }}>Error Loading Content</Typography>
+                    <Typography>{error}</Typography>
+                    <Button variant="contained" sx={{ mt: 2 }} onClick={fetchContentData}>Retry</Button>
+                </Box>
+            </MainCard>
+        );
+    }
 
     return (
         <MainCard>
@@ -304,7 +368,7 @@ export default function UpdateContent() {
 
 
                     {/* DAILY TASK FIELD END */}
-                    <Grid item xs={12}>
+                    {/* <Grid item xs={12}>
                         <Stack spacing={1}>
                             <InputLabel htmlFor="banner">Banner</InputLabel>
                             <Input
@@ -318,7 +382,7 @@ export default function UpdateContent() {
                                 }}
                             />
                         </Stack>
-                    </Grid>
+                    </Grid> */}
 
 
                     <Grid item xs={12}>
@@ -328,10 +392,16 @@ export default function UpdateContent() {
                                     Update
                                 </Button>
                             </AnimateButton> */}
-                            <LoadingButton style={{ margin: "2px" }} type="submit" loading={loading} variant="contained" loadingPosition="start" startIcon={<Home3 />}>
-                                <Button variant="contained">
-                                    Update
-                                </Button>
+                            <LoadingButton
+                                style={{ margin: "2px" }}
+                                type="submit"
+                                loading={loading}
+                                variant="contained"
+                                loadingPosition="start"
+                                startIcon={<Home3 />}
+                                disabled={loading}
+                            >
+                                Update
                             </LoadingButton>
                         </Stack>
                     </Grid>

@@ -2,7 +2,7 @@
 import { FormattedMessage } from 'react-intl';
 
 // assets
-import { Story, Fatrows, PresentionChart } from 'iconsax-react';
+import { Story, Fatrows, PresentionChart, Lock } from 'iconsax-react';
 
 // type
 
@@ -11,7 +11,8 @@ const icons = {
   widgets: Story,
   statistics: Story,
   data: Fatrows,
-  chart: PresentionChart
+  chart: PresentionChart,
+  lock: Lock
 };
 
 // ==============================|| MENU ITEMS - WIDGETS ||============================== //
@@ -43,6 +44,13 @@ const profile = {
       url: '/user/fundTransferManagement',
       icon: icons.data
     },
+    // {
+    //   id: 'change-password',
+    //   title: <FormattedMessage id="Change Password" />,
+    //   type: 'item',
+    //   url: '/apps/profiles/account',
+    //   icon: icons.lock
+    // },
     // {
     //   id: 'deduct-funds',
     //   title: <FormattedMessage id="Deduct Funds" />,

@@ -163,6 +163,36 @@ export default function WithdrawFunds() {
             newErrors.address = 'Please set a withdrawal wallet address in your profile settings';
         }
 
+        // Check if user has already made a withdrawal today
+        if (userData?.last_withdrawal_date) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Start of today
+            const lastWithdrawalDate = new Date(userData.last_withdrawal_date);
+            lastWithdrawalDate.setHours(0, 0, 0, 0);
+
+            if (lastWithdrawalDate.getTime() === today.getTime()) {
+                newErrors.amount = 'You can only make one withdrawal per day. Please try again tomorrow.';
+            }
+        }
+
+        // Check if withdrawal amount is exactly 20% of latest investment
+        if (userData && !newErrors.amount) {
+            // Check if user has investments
+            if (userData.total_investment === 0) {
+                newErrors.amount = 'You need to have active investments to make withdrawals';
+            } else {
+                // Use last_investment_amount if available, otherwise fall back to total_investment
+                const investmentAmount = userData.last_investment_amount > 0 ?
+                    userData.last_investment_amount : userData.total_investment;
+                const exactWithdrawalAmount = investmentAmount * 0.2; // 20% of investment amount
+
+                // Allow a small tolerance for floating point comparison (0.01 USDT)
+                if (Math.abs(parseFloat(withdrawalAmount) - exactWithdrawalAmount) > 0.01) {
+                    newErrors.amount = `Withdrawal amount must be exactly 20% of your ${userData.last_investment_amount > 0 ? 'latest' : 'total'} investment ($${exactWithdrawalAmount.toFixed(2)})`;
+                }
+            }
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -250,6 +280,24 @@ export default function WithdrawFunds() {
                                 <CircularProgress />
                             </Box>
                         )}
+
+                        {userData?.last_withdrawal_date && (() => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const lastWithdrawalDate = new Date(userData.last_withdrawal_date);
+                            lastWithdrawalDate.setHours(0, 0, 0, 0);
+
+                            if (lastWithdrawalDate.getTime() === today.getTime()) {
+                                return (
+                                    <Alert severity="warning" sx={{ mb: 3 }}>
+                                        <Typography variant="subtitle2">
+                                            You have already made a withdrawal today. Your next withdrawal will be available tomorrow.
+                                        </Typography>
+                                    </Alert>
+                                );
+                            }
+                            return null;
+                        })()}
 
                         <Grid container spacing={3}>
                             {/* Wallet Balance Card */}
@@ -365,11 +413,29 @@ export default function WithdrawFunds() {
                                             onChange={(e) => setWithdrawalAmount(e.target.value)}
                                             disabled={loading}
                                             error={!!errors.amount}
-                                            helperText={errors.amount}
+                                            helperText={errors.amount || (userData && userData.total_investment > 0 ?
+                                                `Required withdrawal amount: $${((userData.last_investment_amount > 0 ?
+                                                    userData.last_investment_amount : userData.total_investment) * 0.2).toFixed(2)} (20% of ${userData.last_investment_amount > 0 ? 'latest' : 'total'} investment)` :
+                                                'Make an investment to enable withdrawals')}
                                             InputProps={{
                                                 startAdornment: (
                                                     <InputAdornment position="start">
                                                         <DollarCircle size={20} />
+                                                    </InputAdornment>
+                                                ),
+                                                endAdornment: userData && userData.total_investment > 0 && (
+                                                    <InputAdornment position="end">
+                                                        <Button
+                                                            variant="outlined"
+                                                            size="small"
+                                                            onClick={() => {
+                                                                const investmentAmount = userData.last_investment_amount > 0 ?
+                                                                    userData.last_investment_amount : userData.total_investment;
+                                                                setWithdrawalAmount((investmentAmount * 0.2).toFixed(2));
+                                                            }}
+                                                        >
+                                                            Set 20%
+                                                        </Button>
                                                     </InputAdornment>
                                                 )
                                             }}
@@ -443,7 +509,18 @@ export default function WithdrawFunds() {
                                         loading={loading}
                                         onClick={handleWithdrawal}
                                         startIcon={<MoneyRecive />}
-                                        disabled={!userData || userData.wallet <= 0 || !userData.withdraw_wallet}
+                                        disabled={!userData ||
+                                            userData.wallet <= 0 ||
+                                            !userData.withdraw_wallet ||
+                                            userData.total_investment <= 0 ||
+                                            (userData.last_withdrawal_date && (() => {
+                                                const today = new Date();
+                                                today.setHours(0, 0, 0, 0);
+                                                const lastWithdrawalDate = new Date(userData.last_withdrawal_date);
+                                                lastWithdrawalDate.setHours(0, 0, 0, 0);
+                                                return lastWithdrawalDate.getTime() === today.getTime();
+                                            })())
+                                        }
                                     >
                                         Withdraw Funds
                                     </LoadingButton>
@@ -458,7 +535,8 @@ export default function WithdrawFunds() {
                                     Withdrawal Guidelines:
                                 </Typography>
                                 <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                                    <li>Minimum withdrawal amount is $10 USDT</li>
+                                    <li><strong>Withdrawal amount must be exactly 20% of your latest investment</strong></li>
+                                    <li>You can only withdraw once per day</li>
                                     <li>Withdrawals are processed within 24-48 hours</li>
                                     <li>You must set your withdrawal wallet in your profile settings</li>
                                     <li>Withdrawals can only be made to your registered withdrawal wallet</li>

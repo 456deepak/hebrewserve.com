@@ -14,12 +14,14 @@ import ListItemText from '@mui/material/ListItemText';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputAdornment from '@mui/material/InputAdornment';
+import CircularProgress from '@mui/material/CircularProgress';
 
 // project-imports
 import MainCard from 'components/MainCard';
 import IconButton from 'components/@extended/IconButton';
 import { openSnackbar } from 'api/snackbar';
 import { isNumber, isLowercaseChar, isUppercaseChar, isSpecialChar, minLength } from 'utils/password-validation';
+import useAuth from 'hooks/useAuth';
 
 // third-party
 import * as Yup from 'yup';
@@ -31,6 +33,7 @@ import { Eye, EyeSlash, Minus, TickCircle } from 'iconsax-react';
 // ==============================|| ACCOUNT PROFILE - PASSWORD CHANGE ||============================== //
 
 export default function TabPassword() {
+  const { changePassword } = useAuth();
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -50,7 +53,7 @@ export default function TabPassword() {
   };
 
   return (
-    <MainCard title="Change Password">
+    <MainCard title="Change Admin Password">
       <Formik
         initialValues={{
           old: '',
@@ -72,24 +75,37 @@ export default function TabPassword() {
         })}
         onSubmit={async (values, { resetForm, setErrors, setStatus, setSubmitting }) => {
           try {
+            const response = await changePassword(values.old, values.password);
+
+            if (response.status) {
+              openSnackbar({
+                open: true,
+                message: response.msg || 'Password changed successfully.',
+                variant: 'alert',
+                alert: { color: 'success' }
+              });
+
+              resetForm();
+              setStatus({ success: true });
+            } else {
+              throw new Error(response.msg || 'Failed to change password');
+            }
+          } catch (err) {
+            console.error(err);
             openSnackbar({
               open: true,
-              message: 'Password changed successfully.',
+              message: err.msg || err.message || 'Failed to change password',
               variant: 'alert',
-              alert: { color: 'success' }
+              alert: { color: 'error' }
             });
-
-            resetForm();
             setStatus({ success: false });
-            setSubmitting(false);
-          } catch (err) {
-            setStatus({ success: false });
-            setErrors({ submit: err.message });
+            setErrors({ submit: err.msg || err.message || 'Failed to change password' });
+          } finally {
             setSubmitting(false);
           }
         }}
       >
-        {({ errors, handleBlur, handleChange, handleSubmit, isSubmitting, touched, values }) => (
+        {({ errors, handleBlur, handleChange, handleSubmit, isSubmitting, touched, values, resetForm }) => (
           <form noValidate onSubmit={handleSubmit}>
             <Grid container spacing={3}>
               <Grid item container spacing={3} xs={12} sm={6}>
@@ -235,11 +251,21 @@ export default function TabPassword() {
               </Grid>
               <Grid item xs={12}>
                 <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2}>
-                  <Button variant="outlined" color="secondary">
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={() => resetForm()}
+                    disabled={isSubmitting}
+                  >
                     Cancel
                   </Button>
-                  <Button disabled={isSubmitting || Object.keys(errors).length !== 0} type="submit" variant="contained">
-                    Update Profile
+                  <Button
+                    disabled={isSubmitting || Object.keys(errors).length !== 0}
+                    type="submit"
+                    variant="contained"
+                    startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : null}
+                  >
+                    {isSubmitting ? 'Changing Password...' : 'Change Password'}
                   </Button>
                 </Stack>
               </Grid>
