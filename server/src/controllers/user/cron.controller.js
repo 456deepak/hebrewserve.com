@@ -527,10 +527,10 @@ const processTeamCommission = async (user_id, amount) => {
         try {
           // Add commission to user's wallet
           const auser = await userDbHandler.getById(currentUser._id);
-          const walletUpdate = await userDbHandler.updateByQuery({_id: currentUser._id}, {
+          const walletUpdate = await userDbHandler.updateOneByQuery({_id: currentUser._id}, {
             $inc: {
-              wallet: commissionAmount,
-              "extra.teamCommission": commissionAmount
+              wallet: +commissionAmount,
+              "extra.teamCommission": +commissionAmount
             }
           });
           console.log(`Wallet update result: ${walletUpdate ? 'Success' : 'Failed'}`);
@@ -769,7 +769,7 @@ const _processUserRanks = async () => {
         // Use direct MongoDB update to ensure it works
         try {
           // First try with updateById
-          const updateResult = await userDbHandler.updateByQuery({_id: user._id}, {
+          const updateResult = await userDbHandler.updateOneByQuery({_id: user._id}, {
             rank: newRank,
             trade_booster: rankDetails.trade_booster,
             level_roi_income: rankDetails.level_roi_income,
@@ -1351,7 +1351,7 @@ const _processDailyTradingProfit = async () => {
 
         try {
           // Add profit to user's wallet
-          const walletUpdate = await userDbHandler.updateById(investment.user_id ,{
+          const walletUpdate = await userDbHandler.updateOneByQuery({_id : investment.user_id} ,{
             $inc: {
               wallet: +dailyProfit,
               "extra.dailyProfit": dailyProfit

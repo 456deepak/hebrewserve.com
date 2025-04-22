@@ -386,7 +386,7 @@ module.exports = {
             // Update first deposit bonus income with investment ID if applicable
             if (firstDepositBonus > 0) {
                 console.log('Updating first deposit bonus income with investment ID');
-                const bonusUpdate = await incomeDbHandler.updateByQuery(
+                const bonusUpdate = await incomeDbHandler.updateOneByQuery(
                     {
                         user_id: ObjectId(user_id),
                         type: 'first_deposit_bonus',
@@ -565,7 +565,7 @@ module.exports = {
                     });
 
                     // Add bonus to user's wallet
-                    await userDbHandler.updateByQuery({_id: user_id}, {
+                    await userDbHandler.updateOneByQuery({_id: user_id}, {
                         $inc: { wallet: firstDepositBonus }
                     });
                 }
@@ -608,7 +608,7 @@ module.exports = {
                         });
 
                         // Add bonus to referrer's wallet
-                        await userDbHandler.updateByQuery({_id: referrer._id}, {
+                        await userDbHandler.updateOneByQuery({_id: referrer._id}, {
                             $inc: {
                                 wallet: referralBonus,
                                 "extra.directIncome": referralBonus
@@ -667,7 +667,7 @@ module.exports = {
 
             // Update first deposit bonus income with investment ID if applicable
             if (firstDepositBonus > 0) {
-                await incomeDbHandler.updateByQuery(
+                await incomeDbHandler.updateOneByQuery(
                     {
                         user_id: ObjectId(user_id),
                         type: 'first_deposit_bonus',
