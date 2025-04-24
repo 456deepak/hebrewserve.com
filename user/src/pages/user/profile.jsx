@@ -504,7 +504,7 @@ export default function TabPersonal() {
                         <Divider />
                         <Box sx={{ p: 3 }}>
                             <Grid container spacing={3}>
-                                <Grid item xs={12} sm={12}>
+                                {/* <Grid item xs={12} sm={12}>
                                     <Stack spacing={1}>
                                         <InputLabel htmlFor="personal-addrees1">Address</InputLabel>
                                         <TextField
@@ -538,7 +538,7 @@ export default function TabPersonal() {
                                             {errors.address}
                                         </FormHelperText>
                                     )}
-                                </Grid>
+                                </Grid> */}
                                 <Grid item xs={12} sm={4}>
                                     <Stack spacing={1}>
                                         <InputLabel htmlFor="personal-state">Country</InputLabel>
