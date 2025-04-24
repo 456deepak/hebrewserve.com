@@ -123,7 +123,7 @@ export default function TabPersonal() {
                         // .required('Phone number is required'),
                     // wallet_address: Yup.string().required('Wallet Address is required'),
                     withdraw_wallet: Yup.string()
-                        .matches(/^0x[a-fA-F0-9]{40}$/, 'Must be a valid Ethereum address (0x...)')
+                        .matches(/^0x[a-fA-F0-9]{40}$/, 'Must be a valid BEP20 address (0x...)')
                         .required('Withdrawal wallet address is required')
                 })}
                 onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
@@ -489,7 +489,7 @@ export default function TabPersonal() {
                                             }}
                                         />
                                         <FormHelperText>
-                                            Enter your Ethereum wallet address for withdrawals. This is the only address you'll be able to withdraw funds to.
+                                            Enter your BEP20 wallet address for withdrawals. This is the only address you'll be able to withdraw funds to.
                                         </FormHelperText>
                                     </Stack>
                                     {touched.withdraw_wallet && errors.withdraw_wallet && (
