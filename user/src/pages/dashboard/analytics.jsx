@@ -632,6 +632,15 @@ export default function DashboardAnalytics() {
                             ${(userData?.wallet_topup || 0).toFixed(2)}
                           </Typography>
                         </Box>
+                        <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                        <Box>
+                          <Typography variant="caption" color="#E0E3E7">
+                            Rank
+                          </Typography>
+                          <Typography variant="body1" color="#FFFFFF" sx={{ fontWeight: 600 }}>
+                            {(userData?.rank)}
+                          </Typography>
+                        </Box>
                       </Stack>
                     </Box>
                   </AnimatedBox>
@@ -1190,7 +1199,9 @@ export default function DashboardAnalytics() {
                   />
                 </Box>
               </CardContent>
+              
             </AnimatedMainCard>
+            
           </Grid>
 
           {/* Additional Stats */}
