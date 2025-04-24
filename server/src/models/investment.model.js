@@ -75,6 +75,12 @@ const investmentSchema = new Schema({
         type: Date,
         default: Date.now
     },
+    current_value: {
+        type: Number,
+        default: function() {
+            return this.amount; // Initialize with the investment amount
+        }
+    },
     extra: {
         type: Object,
         default: {}

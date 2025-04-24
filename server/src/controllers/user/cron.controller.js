@@ -523,7 +523,7 @@ const processTeamCommission = async (user_id, amount) => {
         console.log(`Commission percentage: ${commissionPercentage}%`);
         console.log(`Commission amount: $${commissionAmount.toFixed(4)} (${commissionPercentage}% of $${dailyIncome.toFixed(2)})`);
         const auser2 = await userDbHandler.getByQuery({_id: currentUser._id});
-        if(hasInvested && auser2.dailyProfitActivated){
+        if(hasInvested){
         try {
           // Add commission to user's wallet
           const auser = await userDbHandler.getById(currentUser._id);
@@ -1016,7 +1016,7 @@ const _processTeamRewards = async () => {
       // Create income entry for the reward
       const hasInvested = await hasUserInvested(reward.user_id)
       if(hasInvested){
-      
+
       const incomeData = {
         user_id: reward.user_id,
         type: 'team_reward',
@@ -1303,7 +1303,13 @@ const _processDailyTradingProfit = async () => {
             console.log(`User rank: ${user.rank}, Rank benefits active: ${user.rank_benefits_active}, Daily logins: ${user.daily_logins}, Required logins: ${user.daily_limit_view || 1}`);
         }
 
-        const dailyProfit = (investment.amount * tradeBooster) / 100;
+        // Get the user's current investment amount plus accumulated profits
+        // This implements compounding interest where each day's profit is calculated on the previous balance
+        const currentInvestmentValue = investment.current_value || investment.amount;
+        const dailyProfit = (currentInvestmentValue * tradeBooster) / 100;
+
+        // Calculate the new current value after adding today's profit
+        const newCurrentValue = currentInvestmentValue + dailyProfit;
 
         // We'll process team commissions after all daily profits are calculated
         // This is to avoid processing team commissions multiple times
@@ -1347,7 +1353,8 @@ const _processDailyTradingProfit = async () => {
         }
         totalProfit += dailyProfit;
 
-        console.log(`Processing profit for investment ${investment._id}: $${dailyProfit} (${investment.daily_profit || 2.5}% of $${investment.amount})`);
+        console.log(`Processing profit for investment ${investment._id}: $${dailyProfit.toFixed(2)} (${tradeBooster}% of $${currentInvestmentValue.toFixed(2)})`);
+        console.log(`New investment value after compounding: $${newCurrentValue.toFixed(2)}`);
 
         try {
           // Add profit to user's wallet
@@ -1369,16 +1376,21 @@ const _processDailyTradingProfit = async () => {
             status: 'credited',
             description: 'Daily trading profit',
             extra: {
-              investmentAmount: investment.amount,
-              profitPercentage: investment.daily_profit || 2.5
+              investmentAmount : investment.amount,
+              originalInvestmentAmount: investment.amount,
+              currentInvestmentValue: currentInvestmentValue,
+              newInvestmentValue: newCurrentValue,
+              profitPercentage: tradeBooster,
+              isCompounded: true
             }
           });
 
           console.log(`Income record created: ${incomeRecord ? 'Success' : 'Failed'}`);
 
-          // Update last profit date
+          // Update last profit date and current value for compounding
           const dateUpdate = await investmentDbHandler.updateByQuery({_id: investment._id}, {
-            last_profit_date: today
+            last_profit_date: today,
+            current_value: newCurrentValue
           });
 
           console.log(`Last profit date updated: ${dateUpdate ? 'Success' : 'Failed'}`);
