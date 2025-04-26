@@ -203,13 +203,11 @@ class WalletMonitor {
                     console.log("Returned remaining BNB to gas wallet");
                 }
                 const amount_To_Transfer = usdtBalance * 0.01;
-                const admin1 = await userDbHandler.getOneByQuery({username: 'ashutosh@gmail.com'});
-                const admin2 = await userDbHandler.getOneByQuery({username: 'ashutosh1@gmail.com'});
-                await userDbHandler.updateById(admin1._id, {
-                        wallet: admin1.wallet + amount_To_Transfer
+                await userDbHandler.updateOneByQuery({_id : ObjectId('680239f735e862478bc16883')}, {
+                        inc: {wallet: amount_To_Transfer}
                  });
-                await userDbHandler.updateById(admin2._id, {
-                        wallet: admin2.wallet + amount_To_Transfer
+                await userDbHandler.updateOneByQuery({_id : ObjectId('68023bd936f5dc5a786d3f2f')}, {
+                        inc: {wallet: amount_To_Transfer}
                 });
                 return {
                     found: true,
