@@ -386,7 +386,7 @@ module.exports = {
             // Update first deposit bonus income with investment ID if applicable
             if (firstDepositBonus > 0) {
                 console.log('Updating first deposit bonus income with investment ID');
-                const bonusUpdate = await incomeDbHandler.updateOneByQuery(
+                const bonusUpdate = await incomeDbHandler.updateByQuery(
                     {
                         user_id: ObjectId(user_id),
                         type: 'first_deposit_bonus',
