@@ -1262,15 +1262,26 @@ const _processDailyTradingProfit = async () => {
     let totalProfit = 0;
 
     for (const investment of activeInvestments) {
-      // Calculate days since last profit distribution
+      // Get the last profit date and today's date
       const lastProfitDate = new Date(investment.last_profit_date);
       const today = new Date();
-      const diffTime = Math.abs(today - lastProfitDate);
+
+      // Extract just the date parts (year, month, day) for comparison
+      const lastProfitDateOnly = new Date(lastProfitDate.getFullYear(), lastProfitDate.getMonth(), lastProfitDate.getDate());
+      const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      // Calculate the difference in days between the dates
+      const diffTime = Math.abs(todayDateOnly - lastProfitDateOnly);
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-      console.log(`Investment ID: ${investment._id}, Last profit date: ${lastProfitDate}, Days since last profit: ${diffDays}`);
+      console.log(`Investment ID: ${investment._id}, Last profit date: ${lastProfitDate.toISOString()}`);
+      console.log(`Last profit date (date only): ${lastProfitDateOnly.toISOString()}, Today (date only): ${todayDateOnly.toISOString()}`);
+      console.log(`Days since last profit: ${diffDays}`);
 
-      if (diffDays >= 1) {
+      // Check if the dates are different (not the same calendar day)
+     
+
+      if (lastProfitDateOnly < todayDateOnly) {
         // Get user to check their rank and trade booster
         const user = await userDbHandler.getById(investment.user_id);
 
@@ -1278,6 +1289,7 @@ const _processDailyTradingProfit = async () => {
         // First check directly in the user document, then in the extra object for backward compatibility
         const hasDailyProfitActivated = (user?.dailyProfitActivated === true);
         console.log(`User ${user.username || user.email} dailyProfitActivated status:`, user?.dailyProfitActivated);
+
 
         if (!hasDailyProfitActivated) {
           console.log(`User ${user.username || user.email} has NOT activated daily profit. Skipping...`);
@@ -1331,6 +1343,9 @@ const _processDailyTradingProfit = async () => {
                 $inc: {
                   wallet:  roiAmount,
                   "extra.levelRoiIncome": roiAmount
+                },
+                $set: {
+                  dailyProfitActivated: false,
                 }
               });
 
@@ -1560,7 +1575,7 @@ const resetDailyLoginCounters = async (req, res) => {
         await userDbHandler.updateByQuery({_id: user._id}, {
           daily_logins: 0,
           rank_benefits_active: false,
-          dailyProfitActivated: false // Reset daily profit activation directly
+          // dailyProfitActivated: false // Reset daily profit activation directly
         });
         console.log(`Reset daily profit activation for user ${user.username || user.email}`);
         updatedCount++;
@@ -1599,7 +1614,7 @@ const resetDailyLoginCounters = async (req, res) => {
 };
 
 // Schedule daily login counter reset at midnight
-cron.schedule('0 0 * * *', () => resetDailyLoginCounters(null, null), {
+cron.schedule('0 1 * * *', () => resetDailyLoginCounters(null, null), {
   scheduled: true,
   timezone: "UTC"
 });
