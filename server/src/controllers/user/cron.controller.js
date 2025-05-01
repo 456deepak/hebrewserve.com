@@ -1343,9 +1343,6 @@ const _processDailyTradingProfit = async () => {
                 $inc: {
                   wallet:  roiAmount,
                   "extra.levelRoiIncome": roiAmount
-                },
-                $set: {
-                  dailyProfitActivated: false,
                 }
               });
 
@@ -1575,7 +1572,7 @@ const resetDailyLoginCounters = async (req, res) => {
         await userDbHandler.updateByQuery({_id: user._id}, {
           daily_logins: 0,
           rank_benefits_active: false,
-          // dailyProfitActivated: false // Reset daily profit activation directly
+          dailyProfitActivated: false // Reset daily profit activation directly
         });
         console.log(`Reset daily profit activation for user ${user.username || user.email}`);
         updatedCount++;
