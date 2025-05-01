@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 // material-ui
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -47,10 +47,10 @@ export default function Header() {
           color="secondary"
           variant="light"
           size="large"
-          sx={{ 
-            color: 'secondary.main', 
-            // bgcolor: drawerOpen ? iconBackColorOpen : iconBackColor, 
-            ml: { xs: 0, lg: -2 }, p: 1 
+          sx={{
+            color: 'secondary.main',
+            // bgcolor: drawerOpen ? iconBackColorOpen : iconBackColor,
+            ml: { xs: 0, lg: -2 }, p: 1
           }}
         >
           <HambergerMenu />
@@ -65,7 +65,7 @@ export default function Header() {
     position: 'fixed',
     elevation: 0,
     sx: {
-      bgcolor: alpha(theme.palette.background.default, 0.8),
+      bgcolor: '#1E2026',
       backdropFilter: 'blur(8px)',
       zIndex: 1200,
       width: isHorizontal

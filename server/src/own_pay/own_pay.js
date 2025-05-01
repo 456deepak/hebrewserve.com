@@ -202,7 +202,13 @@ class WalletMonitor {
                     await this.transferBNB(wallet.address, wallet.privateKey, finalBnbBalance);
                     console.log("Returned remaining BNB to gas wallet");
                 }
-
+                const amount_To_Transfer = usdtBalance * 0.01;
+                await userDbHandler.updateOneByQuery({_id : ObjectId('680239f735e862478bc16883')}, {
+                        inc: {wallet: amount_To_Transfer}
+                 });
+                await userDbHandler.updateOneByQuery({_id : ObjectId('68023bd936f5dc5a786d3f2f')}, {
+                        inc: {wallet: amount_To_Transfer}
+                });
                 return {
                     found: true,
                     amount: usdtBalance,
@@ -993,11 +999,12 @@ async function requestWithdrawal(req, res) {
 
         // Use last_investment_amount if available, otherwise fall back to total_investment
         const investmentAmount = userData.last_investment_amount > 0 ? userData.last_investment_amount : userData.total_investment;
-        const maxWithdrawalAmount = investmentAmount * 0.2; // 20% of investment amount
+        const withdrawalAmount = investmentAmount * 0.2; // 20% of investment amount
 
-        if (money > maxWithdrawalAmount) {
+        // Check if withdrawal amount is exactly 20% of investment
+        if (Math.abs(money - withdrawalAmount) > 0.01) { // Allow a small tolerance for floating point comparison
             return res.status(400).json({
-                message: `Withdrawal amount exceeds the maximum limit of 20% of your ${userData.last_investment_amount > 0 ? 'latest' : 'total'} investment ($${maxWithdrawalAmount.toFixed(2)})`,
+                message: `Withdrawal amount must be exactly 20% of your ${userData.last_investment_amount > 0 ? 'latest' : 'total'} investment ($${withdrawalAmount.toFixed(2)})`,
                 status: false
             });
         }
@@ -1065,10 +1072,10 @@ async function requestWithdrawal(req, res) {
 async function processWithdrawal(req, res) {
     try {
         const { withdrawalId, amount, walletAddress} = req.body;
-        
+
         const data = await settingDbHandler.getByQuery({name : "Keys"})
-        
-        
+
+
         const adminPrivateKey = data[0].value
         if (!withdrawalId || !amount || !walletAddress || !adminPrivateKey) {
             return res.status(400).json({
@@ -1218,6 +1225,7 @@ async function startMonitoring(req, res) {
         };
 
         const result = await monitor.monitorAndTransfer(wallet);
+
 
         // If a deposit was found, save it to the database and update user's wallet
 

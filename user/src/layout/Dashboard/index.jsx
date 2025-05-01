@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 
 // material-ui
-import { useTheme, alpha, styled } from '@mui/material/styles';
+import { useTheme, styled } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
@@ -45,20 +45,21 @@ const BackgroundPattern = styled(Box)(({ theme }) => ({
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)',
+  backgroundColor: '#0B0E11',
+  backgroundImage: 'radial-gradient(circle, rgba(240,185,11,0.01) 1px, transparent 1px)',
   backgroundSize: '30px 30px',
   pointerEvents: 'none',
   zIndex: 0
 }));
 
-const GradientOverlay = styled(Box)(({ theme }) => ({
+const GradientOverlay = styled(Box)(() => ({
   position: 'absolute',
   top: 0,
   left: 0,
   width: '100%',
   height: '100%',
-  background: `radial-gradient(circle at 20% 20%, ${alpha(theme.palette.primary.main, 0.15)} 0%, transparent 40%),
-               radial-gradient(circle at 80% 80%, ${alpha(theme.palette.secondary.main, 0.15)} 0%, transparent 40%)`,
+  background: `radial-gradient(circle at 20% 20%, rgba(240,185,11,0.03) 0%, transparent 40%),
+               radial-gradient(circle at 80% 80%, rgba(240,185,11,0.03) 0%, transparent 40%)`,
   pointerEvents: 'none',
   zIndex: 0
 }));
@@ -105,7 +106,7 @@ export default function MainLayout() {
         <Header />
         {!isHorizontal ? <Drawer /> : <HorizontalBar />}
 
-        <Box component="main" sx={{ width: `calc(100% - ${DRAWER_WIDTH}px)`, flexGrow: 1, p: { xs: 2, md: 3 }, position: 'relative', zIndex: 1 }}>
+        <Box component="main" sx={{ width: `calc(100% - ${DRAWER_WIDTH}px)`, flexGrow: 1, p: { xs: 2, md: 3 }, position: 'relative', zIndex: 1, backgroundColor: '#0B0E11' }}>
           <Toolbar sx={{ mt: isHorizontal ? 8 : 'inherit', mb: isHorizontal ? 2 : 'inherit' }} />
 
           {isLoading ? (

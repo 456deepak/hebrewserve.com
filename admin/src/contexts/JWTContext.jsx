@@ -101,7 +101,7 @@ export const JWTProvider = ({ children }) => {
   };
 
   const checkReferID = async (refer_id) => {
-    
+
   };
 
   const logout = () => {
@@ -113,6 +113,15 @@ export const JWTProvider = ({ children }) => {
     console.log('email - ', email);
   };
 
+  const changePassword = async (old_password, password) => {
+    try {
+      const response = await axios.put('/change-password', { old_password, password });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { msg: 'Something went wrong' };
+    }
+  };
+
   const updateProfile = () => {};
 
   if (state.isInitialized !== undefined && !state.isInitialized) {
@@ -120,7 +129,7 @@ export const JWTProvider = ({ children }) => {
   }
 
   return (
-    <JWTContext.Provider value={{ ...state, checkReferID, login, logout, register, resetPassword, updateProfile }}>
+    <JWTContext.Provider value={{ ...state, checkReferID, login, logout, register, resetPassword, changePassword, updateProfile }}>
       {children}
     </JWTContext.Provider>
   );

@@ -265,7 +265,7 @@ const HebrewServeTheme = createTheme({
     MuiDrawer: {
       styleOverrides: {
         paper: {
-          backgroundColor: '#1a237e', // Deep indigo background for drawer
+          backgroundColor: '#1E2026', // Binance dark theme background for drawer
           backgroundImage: 'none'
         }
       }
@@ -274,13 +274,13 @@ const HebrewServeTheme = createTheme({
       styleOverrides: {
         root: {
           '&.Mui-selected': {
-            backgroundColor: 'rgba(255, 255, 255, 0.12)', // Lighter background for selected items
+            backgroundColor: 'rgba(240, 185, 11, 0.1)', // Binance yellow background for selected items
             '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.2)'
+              backgroundColor: 'rgba(240, 185, 11, 0.15)'
             }
           },
           '&:hover': {
-            backgroundColor: 'rgba(255, 255, 255, 0.08)'
+            backgroundColor: '#2B3139'
           }
         }
       }

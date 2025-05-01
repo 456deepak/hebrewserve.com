@@ -81,33 +81,69 @@ export default function DashboardDefault() {
   ]
 
   const runCron = async (cronType) => {
-    setLoading(old => { return { ...old, [`${cronType}`]: true } })
+    // First set loading state
+    setLoading(old => { return { ...old, [`${cronType}`]: true } });
+
     try {
-      const password = prompt("Enter Cron Password:", "") || null
-      if (!password || password === '' || password.length === 0) return alert("Invalid Password!")
-      const baseURL = process.env.VITE_APP_TEST === '1' ? process.env.VITE_APP_TEST_API_URL : process.env.VITE_APP_PROD_API_URL
-      const response = await axios.post(`${baseURL}/cron/${cronType}`, { key: password })
+      // Use a more modern approach than prompt() which can freeze the UI
+      // We'll use SweetAlert2 which is already imported in the axios interceptors
+      const { value: password } = await import('sweetalert2').then((Swal) => {
+        return Swal.default.fire({
+          title: 'Enter Cron Password',
+          input: 'password',
+          inputPlaceholder: 'Enter your password',
+          showCancelButton: true,
+          inputValidator: (value) => {
+            if (!value || value.trim() === '') {
+              return 'Please enter a valid password';
+            }
+          }
+        });
+      });
+
+      // If user cancels the dialog or doesn't enter a password
+      if (!password) {
+        return;
+      }
+
+      // Get the correct base URL from environment variables
+      const baseURL = import.meta.env.VITE_APP_TEST === '1'
+        ? import.meta.env.VITE_APP_TEST_API_URL
+        : import.meta.env.VITE_APP_PROD_API_URL;
+
+      // Make the API request with a timeout
+      const response = await axios.post(`${baseURL}/cron/${cronType}`, { key: password }, {
+        timeout: 30000 // 30 seconds timeout for cron jobs which might take longer
+      });
+
+      // Show success message
       openSnackbar({
         open: true,
-        message: response.data?.message,
+        message: response.data?.message || 'Cron job executed successfully',
         variant: 'alert',
-
         alert: {
           color: 'success'
         }
-      })
+      });
+
+      // Refresh dashboard data after cron job
+      fetchDashboardData();
+
     } catch (error) {
+      console.error('Cron job error:', error);
+
+      // Show error message
       openSnackbar({
         open: true,
-        message: error?.message || error,
+        message: error?.response?.data?.message || error?.message || 'Failed to execute cron job',
         variant: 'alert',
-
         alert: {
           color: 'error'
         }
-      })
+      });
     } finally {
-      setLoading(old => { return { ...old, [`${cronType}`]: false } })
+      // Always reset loading state
+      setLoading(old => { return { ...old, [`${cronType}`]: false } });
     }
   }
 
@@ -119,13 +155,17 @@ export default function DashboardDefault() {
     transactions: { deposits: 0, withdrawals: 0, transfers: 0 }
   });
 
-  useEffect(() => {
-    (async () => {
-      const response = await axios.get("/get-all-users-data")
-      console.log(response)
-      if (response.status === 200){
-        console.log(response.data?.result)
-        setUserData(response.data?.result)
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Function to fetch dashboard data
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await axios.get("/get-all-users-data");
+      if (response.status === 200) {
+        setUserData(response.data?.result || {});
 
         // Set stats based on the response
         setStats({
@@ -151,9 +191,33 @@ export default function DashboardDefault() {
           }
         });
       } else {
-        console.log(response?.data)
+        setError('Failed to fetch dashboard data');
+        console.error('API Error:', response?.data);
       }
-    })()
+    } catch (err) {
+      setError(err.message || 'An error occurred while fetching dashboard data');
+      console.error('Dashboard data fetch error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Set a flag to track if the component is mounted
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (isMounted) {
+        await fetchDashboardData();
+      }
+    };
+
+    loadData();
+
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
   }, [])
 
   const generateRandomPercentage = (inputValue) => {
@@ -231,6 +295,31 @@ export default function DashboardDefault() {
     data: [stats.income.daily, stats.income.direct, stats.income.team, stats.income.daily * 0.2]
   }];
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <MainCard>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh', flexDirection: 'column' }}>
+          <Typography variant="h4" sx={{ mb: 2 }}>Loading Dashboard Data...</Typography>
+          {/* You can add a spinner or progress indicator here */}
+        </Box>
+      </MainCard>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <MainCard>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh', flexDirection: 'column' }}>
+          <Typography variant="h4" color="error" sx={{ mb: 2 }}>Error Loading Dashboard</Typography>
+          <Typography>{error}</Typography>
+          <Button variant="contained" sx={{ mt: 2 }} onClick={fetchDashboardData}>Retry</Button>
+        </Box>
+      </MainCard>
+    );
+  }
+
   return (
     <Grid container rowSpacing={4.5} columnSpacing={2.75}>
       {/* row 1 - Welcome and Quick Actions */}
@@ -247,7 +336,7 @@ export default function DashboardDefault() {
               >
                 View All Users
               </Button>
-              <LoadingButton
+              {/* <LoadingButton
                 loading={loading['withdrawCron']}
                 variant="contained"
                 color="secondary"
@@ -255,7 +344,7 @@ export default function DashboardDefault() {
                 onClick={() => runCron('withdrawCron')}
               >
                 Run Daily Cron
-              </LoadingButton>
+              </LoadingButton> */}
             </Stack>
           </Grid>
         </Grid>

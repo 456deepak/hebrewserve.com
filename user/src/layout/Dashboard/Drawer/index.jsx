@@ -50,7 +50,8 @@ export default function MainDrawer({ window }) {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: DRAWER_WIDTH,
-              borderRight: `1px solid ${theme.palette.divider}`,
+              borderRight: '1px solid #2B3139',
+              backgroundColor: '#1E2026',
               backgroundImage: 'none',
               boxShadow: 'inherit'
             }

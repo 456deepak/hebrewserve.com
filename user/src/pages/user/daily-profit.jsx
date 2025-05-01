@@ -22,6 +22,10 @@ export default function DailyProfit() {
         accessorKey: 'extra.investmentAmount'
       },
       {
+        header: 'Compounded Amount',
+        accessorKey: 'extra.currentInvestmentValue'
+      },
+      {
         header: 'Profit Amount',
         accessorKey: 'amount'
       },

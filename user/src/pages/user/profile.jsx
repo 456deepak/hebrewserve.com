@@ -84,14 +84,14 @@ export default function TabPersonal() {
             content={false}
             title="Personal Information"
             sx={{
-                bgcolor: 'grey.900',
+                bgcolor: '#2B3139',
                 '& .MuiCardHeader-root': {
-                    color: 'common.white',
+                    color: '#FFFFFF',
                     p: 3,
-                    bgcolor: 'grey.900'
+                    bgcolor: '#1E2026'
                 },
                 '& .MuiInputLabel-root': {
-                    color: 'grey.500',
+                    color: '#E0E3E7',
                     fontSize: '0.875rem'
                 }
             }}
@@ -123,7 +123,7 @@ export default function TabPersonal() {
                         // .required('Phone number is required'),
                     // wallet_address: Yup.string().required('Wallet Address is required'),
                     withdraw_wallet: Yup.string()
-                        .matches(/^0x[a-fA-F0-9]{40}$/, 'Must be a valid Ethereum address (0x...)')
+                        .matches(/^0x[a-fA-F0-9]{40}$/, 'Must be a valid BEP20 address (0x...)')
                         .required('Withdrawal wallet address is required')
                 })}
                 onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
@@ -223,15 +223,15 @@ export default function TabPersonal() {
                                             placeholder="Last Name"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'grey.800',
+                                                    bgcolor: '#1E2026',
                                                     '& fieldset': {
-                                                        borderColor: 'grey.700'
+                                                        borderColor: '#3E4554'
                                                     },
                                                     '&:hover fieldset': {
-                                                        borderColor: 'primary.main'
+                                                        borderColor: '#F0B90B'
                                                     },
                                                     '& input': {
-                                                        color: 'common.white'
+                                                        color: '#FFFFFF'
                                                     }
                                                 }
                                             }}
@@ -257,15 +257,15 @@ export default function TabPersonal() {
                                             placeholder="Email Address"
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'grey.800',
+                                                    bgcolor: '#1E2026',
                                                     '& fieldset': {
-                                                        borderColor: 'grey.700'
+                                                        borderColor: '#3E4554'
                                                     },
                                                     '&:hover fieldset': {
-                                                        borderColor: 'primary.main'
+                                                        borderColor: '#F0B90B'
                                                     },
                                                     '& input': {
-                                                        color: 'common.white'
+                                                        color: '#FFFFFF'
                                                     }
                                                 }
                                             }}
@@ -287,16 +287,16 @@ export default function TabPersonal() {
                                                 name="dob-month"
                                                 onChange={(e) => handleChangeMonth(e, values.dob, setFieldValue)}
                                                 sx={{
-                                                    bgcolor: 'grey.800',
-                                                    color: 'common.white',
+                                                    bgcolor: '#1E2026',
+                                                    color: '#FFFFFF',
                                                     '& .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'grey.700'
+                                                        borderColor: '#3E4554'
                                                     },
                                                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'primary.main'
+                                                        borderColor: '#F0B90B'
                                                     },
                                                     '& .MuiSvgIcon-root': {
-                                                        color: 'common.white'
+                                                        color: '#FFFFFF'
                                                     }
                                                 }}
                                             >
@@ -321,16 +321,16 @@ export default function TabPersonal() {
                                                 onChange={(e) => handleChangeDay(e, values.dob, setFieldValue)}
                                                 MenuProps={MenuProps}
                                                 sx={{
-                                                    bgcolor: 'grey.800',
-                                                    color: 'common.white',
+                                                    bgcolor: '#1E2026',
+                                                    color: '#FFFFFF',
                                                     '& .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'grey.700'
+                                                        borderColor: '#3E4554'
                                                     },
                                                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'primary.main'
+                                                        borderColor: '#F0B90B'
                                                     },
                                                     '& .MuiSvgIcon-root': {
-                                                        color: 'common.white'
+                                                        color: '#FFFFFF'
                                                     }
                                                 }}
                                             >
@@ -360,13 +360,13 @@ export default function TabPersonal() {
                                                     }}
                                                     sx={{
                                                         '& .MuiOutlinedInput-root': {
-                                                            bgcolor: 'grey.800',
-                                                            color: 'common.white',
+                                                            bgcolor: '#1E2026',
+                                                            color: '#FFFFFF',
                                                             '& fieldset': {
-                                                                borderColor: 'grey.700'
+                                                                borderColor: '#3E4554'
                                                             },
                                                             '&:hover fieldset': {
-                                                                borderColor: 'primary.main'
+                                                                borderColor: '#F0B90B'
                                                             }
                                                         }
                                                     }}
@@ -390,16 +390,16 @@ export default function TabPersonal() {
                                                 onBlur={handleBlur}
                                                 onChange={handleChange}
                                                 sx={{
-                                                    bgcolor: 'grey.800',
-                                                    color: 'common.white',
+                                                    bgcolor: '#1E2026',
+                                                    color: '#FFFFFF',
                                                     '& .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'grey.700'
+                                                        borderColor: '#3E4554'
                                                     },
                                                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                        borderColor: 'primary.main'
+                                                        borderColor: '#F0B90B'
                                                     },
                                                     '& .MuiSvgIcon-root': {
-                                                        color: 'common.white'
+                                                        color: '#FFFFFF'
                                                     }
                                                 }}
                                             >
@@ -432,15 +432,15 @@ export default function TabPersonal() {
                                                 placeholder="Contact Number"
                                                 sx={{
                                                     '& .MuiOutlinedInput-root': {
-                                                        bgcolor: 'grey.800',
+                                                        bgcolor: '#1E2026',
                                                         '& fieldset': {
-                                                            borderColor: 'grey.700'
+                                                            borderColor: '#3E4554'
                                                         },
                                                         '&:hover fieldset': {
-                                                            borderColor: 'primary.main'
+                                                            borderColor: '#F0B90B'
                                                         },
                                                         '& input': {
-                                                            color: 'common.white'
+                                                            color: '#FFFFFF'
                                                         }
                                                     }
                                                 }}
@@ -453,7 +453,7 @@ export default function TabPersonal() {
                                         </FormHelperText>
                                     )}
                                 </Grid>
-                                
+
                                 <Grid item xs={12} sm={6}>
                                     <Stack spacing={1}>
                                         <InputLabel htmlFor="personal-withdraw_wallet">
@@ -475,21 +475,21 @@ export default function TabPersonal() {
                                             placeholder="0x..."
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'grey.800',
+                                                    bgcolor: '#1E2026',
                                                     '& fieldset': {
-                                                        borderColor: 'grey.700'
+                                                        borderColor: '#3E4554'
                                                     },
                                                     '&:hover fieldset': {
-                                                        borderColor: 'primary.main'
+                                                        borderColor: '#F0B90B'
                                                     },
                                                     '& input': {
-                                                        color: 'common.white'
+                                                        color: '#FFFFFF'
                                                     }
                                                 }
                                             }}
                                         />
                                         <FormHelperText>
-                                            Enter your Ethereum wallet address for withdrawals. This is the only address you'll be able to withdraw funds to.
+                                            Enter your BEP20 wallet address for withdrawals. This is the only address you'll be able to withdraw funds to.
                                         </FormHelperText>
                                     </Stack>
                                     {touched.withdraw_wallet && errors.withdraw_wallet && (
@@ -504,7 +504,7 @@ export default function TabPersonal() {
                         <Divider />
                         <Box sx={{ p: 3 }}>
                             <Grid container spacing={3}>
-                                <Grid item xs={12} sm={12}>
+                                {/* <Grid item xs={12} sm={12}>
                                     <Stack spacing={1}>
                                         <InputLabel htmlFor="personal-addrees1">Address</InputLabel>
                                         <TextField
@@ -538,7 +538,7 @@ export default function TabPersonal() {
                                             {errors.address}
                                         </FormHelperText>
                                     )}
-                                </Grid>
+                                </Grid> */}
                                 <Grid item xs={12} sm={4}>
                                     <Stack spacing={1}>
                                         <InputLabel htmlFor="personal-state">Country</InputLabel>
@@ -605,15 +605,15 @@ export default function TabPersonal() {
                                             placeHolder={values?.city || "Select City"}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    bgcolor: 'grey.800',
+                                                    bgcolor: '#1E2026',
                                                     '& fieldset': {
-                                                        borderColor: 'grey.700'
+                                                        borderColor: '#3E4554'
                                                     },
                                                     '&:hover fieldset': {
-                                                        borderColor: 'primary.main'
+                                                        borderColor: '#F0B90B'
                                                     },
                                                     '& input': {
-                                                        color: 'common.white'
+                                                        color: '#FFFFFF'
                                                     }
                                                 }
                                             }}
@@ -628,10 +628,11 @@ export default function TabPersonal() {
                                             disabled={isSubmitting || Object.keys(errors).length !== 0}
                                             variant="contained"
                                             sx={{
-                                                bgcolor: 'primary.main',
-                                                color: 'common.white',
+                                                bgcolor: '#F0B90B',
+                                                color: '#FFFFFF',
                                                 '&:hover': {
-                                                    bgcolor: 'primary.dark'
+                                                    bgcolor: '#F0B90B',
+                                                    opacity: 0.9
                                                 }
                                             }}
                                         >

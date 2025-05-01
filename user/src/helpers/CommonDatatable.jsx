@@ -155,9 +155,9 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
     <MainCard
       content={false}
       sx={{
-        bgcolor: 'grey.900',
+        bgcolor: '#1E2026',
         '& .MuiCardHeader-root': {
-          bgcolor: 'grey.900'
+          bgcolor: '#1E2026'
         }
       }}
     >
@@ -168,9 +168,9 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
         justifyContent="space-between"
         sx={{
           padding: 2,
-          bgcolor: 'grey.900',
+          bgcolor: '#1E2026',
           borderBottom: '1px solid',
-          borderColor: 'grey.800'
+          borderColor: '#2B3139'
         }}
       >
         <DebouncedInput
@@ -179,17 +179,17 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
           placeholder={`Search ${data.length} records...`}
           sx={{
             '& .MuiOutlinedInput-root': {
-              bgcolor: 'grey.800',
-              color: 'common.white',
+              bgcolor: '#2B3139',
+              color: '#FFFFFF',
               '& fieldset': {
-                borderColor: 'common.white',
+                borderColor: '#3E4554',
                 borderWidth: '1.5px',
               },
               '&:hover fieldset': {
-                borderColor: 'primary.main'
+                borderColor: '#F0B90B'
               },
               '& input::placeholder': {
-                color: 'grey.500'
+                color: '#B7BDC6'
               }
             }
           }}
@@ -201,9 +201,9 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
         <TableContainer
           component={Paper}
           sx={{
-            bgcolor: 'grey.900',
+            bgcolor: '#1E2026',
             '& .MuiPaper-root': {
-              bgcolor: 'grey.900'
+              bgcolor: '#1E2026'
             }
           }}
         >
@@ -213,20 +213,20 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
                 <TableRow
                   key={headerGroup.id}
                   sx={{
-                    bgcolor: 'grey.800',
+                    bgcolor: '#2B3139',
                     '& th': {
-                      color: 'common.white',
+                      color: '#FFFFFF',
                       borderBottom: '1px solid',
-                      borderColor: 'grey.700'
+                      borderColor: '#3E4554'
                     }
                   }}
                 >
-                  <TableCell key={'#'} sx={{ color: 'common.white' }}>#</TableCell>
+                  <TableCell key={'#'} sx={{ color: '#FFFFFF' }}>#</TableCell>
                   {headerGroup.headers.map((header) => (
                     <TableCell
                       key={header.id}
                       {...header.column.columnDef.meta}
-                      sx={{ color: 'common.white' }}
+                      sx={{ color: '#FFFFFF' }}
                     >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableCell>
@@ -239,10 +239,10 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
                 <TableRow
                   key={headerGroup.id}
                   sx={{
-                    bgcolor: 'grey.800',
+                    bgcolor: '#2B3139',
                     '& th': {
                       borderBottom: '1px solid',
-                      borderColor: 'grey.700'
+                      borderColor: '#3E4554'
                     }
                   }}
                 >
@@ -255,13 +255,13 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
                           table={table}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              bgcolor: 'grey.800',
-                              color: 'common.white',
+                              bgcolor: '#2B3139',
+                              color: '#FFFFFF',
                               '& fieldset': {
-                                borderColor: 'grey.700'
+                                borderColor: '#3E4554'
                               },
                               '&:hover fieldset': {
-                                borderColor: 'primary.main'
+                                borderColor: '#F0B90B'
                               }
                             }
                           }}
@@ -278,24 +278,24 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
                   <TableRow
                     key={row.id}
                     sx={{
-                      bgcolor: 'grey.900',
+                      bgcolor: '#1E2026',
                       '&:hover': {
-                        bgcolor: 'grey.800',
+                        bgcolor: '#2B3139',
                         transition: 'all 0.2s ease'
                       },
                       '& td': {
-                        color: 'common.white',
+                        color: '#FFFFFF',
                         borderBottom: '1px solid',
-                        borderColor: 'grey.800'
+                        borderColor: '#2B3139'
                       }
                     }}
                   >
-                    <TableCell key={index} sx={{ color: 'common.white' }}>{index + 1}</TableCell>
+                    <TableCell key={index} sx={{ color: '#FFFFFF' }}>{index + 1}</TableCell>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
                         {...cell.column.columnDef.meta}
-                        sx={{ color: 'common.white' }}
+                        sx={{ color: '#FFFFFF' }}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
@@ -307,7 +307,7 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
                   <TableCell
                     colSpan={table.getAllColumns().length}
                     sx={{
-                      color: 'grey.500',
+                      color: '#B7BDC6',
                       textAlign: 'center',
                       py: 3
                     }}
@@ -322,8 +322,8 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
 
         {!top && (
           <>
-            <Divider sx={{ borderColor: 'grey.800' }} />
-            <Box sx={{ p: 2, bgcolor: 'grey.900' }}>
+            <Divider sx={{ borderColor: '#2B3139' }} />
+            <Box sx={{ p: 2, bgcolor: '#1E2026' }}>
               <TablePagination
                 {...{
                   setPageSize: table.setPageSize,
@@ -333,15 +333,15 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
                 }}
                 sx={{
                   '& .MuiSelect-select': {
-                    color: 'common.white',
-                    bgcolor: 'grey.800'
+                    color: '#FFFFFF',
+                    bgcolor: '#2B3139'
                   },
                   '& .MuiTablePagination-displayedRows': {
-                    color: 'common.white'
+                    color: '#FFFFFF'
                   },
                   '& .MuiTablePagination-actions': {
                     '& button': {
-                      color: 'common.white'
+                      color: '#FFFFFF'
                     }
                   }
                 }}
