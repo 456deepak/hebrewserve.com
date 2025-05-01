@@ -46,32 +46,51 @@ function TabPanel({ children, value, index, ...other }) {
   );
 }
 
-// Validation schema for user-to-user transfer
-const userToUserValidationSchema = Yup.object({
-  user_id: Yup.string()
-    .required('Username is required')
-    .min(3, 'Username must be at least 3 characters'),
-  amount: Yup.number()
-    .required('Amount is required')
-    .positive('Amount must be positive')
-    .min(10, 'Minimum transfer amount is $10'),
-  remark: Yup.string()
-    .required('Remark is required')
-    .min(3, 'Remark must be at least 3 characters')
-    .max(250, 'Remark must be at most 250 characters')
-});
+// Create validation schemas with context
+const createValidationSchemas = (maxAmount) => {
+  // Validation schema for user-to-user transfer
+  const userToUserSchema = Yup.object({
+    user_id: Yup.string()
+      .required('Username is required')
+      .min(3, 'Username must be at least 3 characters'),
+    amount: Yup.number()
+      .required('Amount is required')
+      .positive('Amount must be positive')
+      .min(10, 'Minimum transfer amount is $10')
+      .test(
+        'max-investment-percentage',
+        `Amount exceeds 20% of your investment ($${maxAmount.toFixed(2)})`,
+        function(value) {
+          return !value || value <= maxAmount;
+        }
+      ),
+    remark: Yup.string()
+      .required('Remark is required')
+      .min(3, 'Remark must be at least 3 characters')
+      .max(250, 'Remark must be at most 250 characters')
+  });
 
-// Validation schema for self transfer
-const selfTransferValidationSchema = Yup.object({
-  amount: Yup.number()
-    .required('Amount is required')
-    .positive('Amount must be positive')
-    .min(10, 'Minimum transfer amount is $10'),
-  remark: Yup.string()
-    .required('Remark is required')
-    .min(3, 'Remark must be at least 3 characters')
-    .max(250, 'Remark must be at most 250 characters')
-});
+  // Validation schema for self transfer
+  const selfTransferSchema = Yup.object({
+    amount: Yup.number()
+      .required('Amount is required')
+      .positive('Amount must be positive')
+      .min(10, 'Minimum transfer amount is $10')
+      .test(
+        'max-investment-percentage',
+        `Amount exceeds 20% of your investment ($${maxAmount.toFixed(2)})`,
+        function(value) {
+          return !value || value <= maxAmount;
+        }
+      ),
+    remark: Yup.string()
+      .required('Remark is required')
+      .min(3, 'Remark must be at least 3 characters')
+      .max(250, 'Remark must be at most 250 characters')
+  });
+
+  return { userToUserSchema, selfTransferSchema };
+};
 
 export default function TransferFunds() {
   const theme = useTheme();
@@ -80,9 +99,27 @@ export default function TransferFunds() {
   const [loadingSelfTransfer, setLoadingSelfTransfer] = useState(false);
   const [usernameCheckLoading, setUsernameCheckLoading] = useState(false);
   const [usernameValid, setUsernameValid] = useState(null);
+  const [maxTransferAmount, setMaxTransferAmount] = useState(0);
 
   // Get user data from Auth context
   const { user } = useAuth();
+
+  // Calculate maximum transfer amount (20% of total investment)
+  const calculateMaxTransferAmount = () => {
+    // Use last_investment_amount if available, otherwise fall back to total_investment
+    const investmentAmount = user?.last_investment_amount > 0
+      ? user.last_investment_amount
+      : (user?.total_investment || 0);
+
+    return investmentAmount * 0.2; // 20% of investment amount
+  };
+
+  // Create validation schemas with the current max transfer amount
+  const { userToUserSchema, selfTransferSchema } = useMemo(() => {
+    const maxAmount = calculateMaxTransferAmount();
+    setMaxTransferAmount(maxAmount);
+    return createValidationSchemas(maxAmount);
+  }, [user?.last_investment_amount, user?.total_investment]);
 
   // API endpoint for transfer history
   const apiPoint = 'get-all-fund-transfers';
@@ -150,7 +187,7 @@ export default function TransferFunds() {
       amount: '',
       remark: ''
     },
-    validationSchema: userToUserValidationSchema,
+    validationSchema: userToUserSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
         setLoadingUserToUser(true);
@@ -211,7 +248,7 @@ export default function TransferFunds() {
       amount: '',
       remark: ''
     },
-    validationSchema: selfTransferValidationSchema,
+    validationSchema: selfTransferSchema,
     onSubmit: async (values, { resetForm }) => {
       try {
         setLoadingSelfTransfer(true);
@@ -388,6 +425,16 @@ export default function TransferFunds() {
                       A 2% transfer fee will be deducted from the transfer amount.
                     </Alert>
 
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      Transfer limit: 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment (${maxTransferAmount.toFixed(2)})
+                    </Alert>
+
+                    {maxTransferAmount <= 0 && (
+                      <Alert severity="error" sx={{ mb: 2 }}>
+                        You need to have active investments to make transfers. <Button component={Link} to="/investments/invest" color="primary" sx={{ p: 0, minWidth: 'auto', textTransform: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>Invest now</Button> to enable transfers.
+                      </Alert>
+                    )}
+
                     <LoadingButton
                       disableElevation
                       loading={loadingUserToUser}
@@ -397,7 +444,7 @@ export default function TransferFunds() {
                       variant="contained"
                       color="primary"
                       startIcon={<ArrowRight2 />}
-                      disabled={!usernameValid || parseFloat(user?.wallet || 0) <= 0}
+                      disabled={!usernameValid || parseFloat(user?.wallet || 0) <= 0 || maxTransferAmount <= 0}
                     >
                       Transfer to User
                     </LoadingButton>
@@ -413,6 +460,16 @@ export default function TransferFunds() {
                     <Alert severity="info" sx={{ mb: 2 }}>
                       Transfer funds from your main wallet to your own top-up wallet.
                     </Alert>
+
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      Transfer limit: 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment (${maxTransferAmount.toFixed(2)})
+                    </Alert>
+
+                    {maxTransferAmount <= 0 && (
+                      <Alert severity="error" sx={{ mb: 2 }}>
+                        You need to have active investments to make transfers. <Button component={Link} to="/investments/invest" color="primary" sx={{ p: 0, minWidth: 'auto', textTransform: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>Invest now</Button> to enable transfers.
+                      </Alert>
+                    )}
 
                     {parseFloat(user?.wallet || 0) <= 0 && (
                       <Alert severity="warning" sx={{ mb: 2 }}>
@@ -471,7 +528,7 @@ export default function TransferFunds() {
                       variant="contained"
                       color="primary"
                       startIcon={<WalletMoney />}
-                      disabled={parseFloat(user?.wallet || 0) <= 0}
+                      disabled={parseFloat(user?.wallet || 0) <= 0 || maxTransferAmount <= 0}
                     >
                       Transfer to Top-up Wallet
                     </LoadingButton>
@@ -537,8 +594,12 @@ export default function TransferFunds() {
                 <strong>Self Transfer:</strong> Transfer funds from your main wallet to your own top-up wallet.
               </Typography>
 
-              <Alert severity="warning">
+              <Alert severity="warning" sx={{ mb: 2 }}>
                 A 2% fee is charged for user-to-user transfers. No fee is charged for self transfers.
+              </Alert>
+
+              <Alert severity="warning">
+                Transfer limit: You can only transfer up to 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment amount per day.
               </Alert>
             </Stack>
           </Paper>

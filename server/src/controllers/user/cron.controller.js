@@ -1504,6 +1504,40 @@ const resetDailyLoginCounters = async (req, res) => {
 //   timezone: "UTC"
 // });
 
+// Function to check if a user has made an investment
+const hasUserInvested = async (userId) => {
+  try {
+    console.log(`Checking if user ${userId} has made an investment`);
+
+    // First check if user exists
+    const user = await userDbHandler.getById(userId);
+    if (!user) {
+      console.log(`User ${userId} not found`);
+      return false;
+    }
+
+    // Check if user has total_investment > 0
+    if (user.total_investment && user.total_investment > 0) {
+      console.log(`User ${userId} has total_investment of $${user.total_investment}`);
+      return true;
+    }
+
+    // As a fallback, check if user has any active investments
+    const investments = await investmentDbHandler.getByQuery({
+      user_id: userId,
+      status: { $in: ['active', 1, 2] }
+    });
+
+    const hasInvestments = investments && investments.length > 0;
+    console.log(`User ${userId} has ${investments ? investments.length : 0} active investments`);
+
+    return hasInvestments;
+  } catch (error) {
+    console.error(`Error checking if user ${userId} has invested:`, error);
+    return false;
+  }
+};
+
 module.exports = {
   distributeTokensHandler,
   distributeLevelIncome,
@@ -1514,5 +1548,6 @@ module.exports = {
   processDailyTradingProfit,
   processUserRanks,
   processTeamRewards,
-  resetDailyLoginCounters
+  resetDailyLoginCounters,
+  hasUserInvested
 };
