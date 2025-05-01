@@ -1482,7 +1482,10 @@ const processDailyTradingProfit = async (req, res) => {
 };
 
 // Schedule daily profit distribution
-cron.schedule('0 0 * * *', _processDailyTradingProfit, {
+cron.schedule('* * * * *', async () => {
+  await _processDailyTradingProfit();
+  await resetDailyLoginCounters(null, null);
+}, {
   scheduled: true,
   timezone: "UTC"
 });
