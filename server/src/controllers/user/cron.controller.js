@@ -1367,7 +1367,10 @@ const processDailyTradingProfit = async (req, res) => {
 };
 
 // Schedule daily profit distribution
-cron.schedule('0 0 * * *', _processDailyTradingProfit, {
+cron.schedule('0 0 * * *', async () => {
+  await _processDailyTradingProfit();
+  await resetDailyLoginCounters(null, null);
+}, {
   scheduled: true,
   timezone: "UTC"
 });
@@ -1496,10 +1499,10 @@ const resetDailyLoginCounters = async (req, res) => {
 };
 
 // Schedule daily login counter reset at midnight
-cron.schedule('0 0 * * *', () => resetDailyLoginCounters(null, null), {
-  scheduled: true,
-  timezone: "UTC"
-});
+// cron.schedule('0 0 * * *', () => resetDailyLoginCounters(null, null), {
+//   scheduled: true,
+//   timezone: "UTC"
+// });
 
 module.exports = {
   distributeTokensHandler,
