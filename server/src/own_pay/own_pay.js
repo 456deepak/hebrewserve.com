@@ -1035,7 +1035,7 @@ async function requestWithdrawal(req, res) {
         };
 
         // Update user's wallet balance and last withdrawal date
-        await userDbHandler.updateById(user_id, {
+        await userDbHandler.updateOneByQuery({_id : user_id}, {
             $inc: {
                 wallet: -money,
                 wallet_withdraw: money

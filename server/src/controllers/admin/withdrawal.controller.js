@@ -113,7 +113,7 @@ module.exports = {
         let responseData = {};
         try {
             const { withdrawalId, txid } = req.body;
-           
+
             if (!withdrawalId) {
                 responseData.msg = 'Withdrawal ID is required';
                 return responseHelper.error(res, responseData);
@@ -133,12 +133,31 @@ module.exports = {
                 return responseHelper.error(res, responseData);
             }
 
+            // Get user
+            const user = await userDbHandler.getById(withdrawal.user_id);
+            if (!user) {
+                responseData.msg = 'User not found';
+                return responseHelper.error(res, responseData);
+            }
+
+            // Update user's wallet_withdraw balance (deduct the amount that was being held)
+            await userDbHandler.updateOneByQuery({_id : withdrawal.user_id}, {
+                $inc: {
+                    wallet: -parseFloat(withdrawal.amount)
+                }
+            });
+
+            console.log(`Updated user ${user.username || user.email} wallet_withdraw balance: -$${withdrawal.amount}`);
+
             // Update withdrawal status
-                await withdrawalDbHandler.updateOneByQuery({_id: withdrawalId}, {
-                    status: 1,
-                    txid: txid ,
-                    processed_at: new Date()
-                });
+            await withdrawalDbHandler.updateOneByQuery({_id: withdrawalId}, {
+                status: 1,
+                txid: txid,
+                processed_at: new Date(),
+                remark: "COMPLETED"
+            });
+
+            console.log(`Withdrawal ${withdrawalId} approved successfully with txid: ${txid || 'manual-process'}`);
 
             responseData.msg = 'Withdrawal approved successfully';
             responseData.txid = txid || 'manual-process';
@@ -189,7 +208,7 @@ module.exports = {
             }
 
             // Refund the amount to user's wallet
-            await userDbHandler.updateById(withdrawal.user_id, {
+            await userDbHandler.updateOneByQuery({_id : withdrawal.user_id}, {
                 $inc: {
                     wallet: parseFloat(withdrawal.amount),
                     wallet_withdraw: -parseFloat(withdrawal.amount)

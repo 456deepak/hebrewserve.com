@@ -81,14 +81,16 @@ export default function TransactionHistory() {
           let statusText = 'Pending';
           let color = theme.palette.warning.main;
 
-          if (status === 1) {
+          if (status === 0) {
             statusText = 'Processing';
-            color = theme.palette.info.main;
+            color = theme.palette.warning.main;
           } else if (status === 2) {
             statusText = 'Completed';
             color = theme.palette.success.main;
+          }else if (status === 1) {
+            statusText = 'Rejected';
+            color = theme.palette.warning.main;
           }
-
           return (
             <Chip
               label={statusText}
@@ -137,10 +139,10 @@ export default function TransactionHistory() {
           let statusText = 'Pending';
           let color = theme.palette.warning.main;
 
-          if (status === 1) {
-            statusText = 'Processing';
-            color = theme.palette.info.main;
-          } else if (status === 2) {
+          if (status === 2) {
+            statusText = 'Rejected';
+            color = theme.palette.warning.main;
+          } else if (status === 1) {
             statusText = 'Completed';
             color = theme.palette.success.main;
           }
