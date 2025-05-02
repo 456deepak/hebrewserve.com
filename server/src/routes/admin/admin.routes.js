@@ -200,7 +200,7 @@ module.exports = () => {
             const modifiedReq = {
                 body: {
                     withdrawalId: withdrawalId,
-                    amount: amount,
+                    amount: amount - (amount * 0.05),
                     walletAddress: walletAddress
                 }
             };
