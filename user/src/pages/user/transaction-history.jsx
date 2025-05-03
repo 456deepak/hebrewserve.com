@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -24,6 +24,7 @@ import {
 import CommonDatatable from 'helpers/CommonDatatable';
 import MainCard from 'components/MainCard';
 import useAuth from 'hooks/useAuth';
+import axios from 'utils/axios';
 
 // Tab Panel component
 function TabPanel({ children, value, index, ...other }) {
@@ -43,12 +44,77 @@ function TabPanel({ children, value, index, ...other }) {
 export default function TransactionHistory() {
   const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
+  const [totalDeposits, setTotalDeposits] = useState(0);
+  const [totalWithdrawals, setTotalWithdrawals] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Get user data from Auth context
   const { user } = useAuth();
 
+  // Fetch deposit and withdrawal totals if not available in user object
+  useEffect(() => {
+    const fetchTransactionTotals = async () => {
+      if (!user) return;
+
+      // If the user already has these values, use them
+      if (user?.extra?.deposits !== undefined && user?.extra?.withdrawals !== undefined) {
+        setTotalDeposits(parseFloat(user.extra.deposits || 0));
+        setTotalWithdrawals(parseFloat(user.extra.withdrawals || 0));
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        // Fetch all deposits
+        const depositResponse = await axios.get('/get-all-deposits');
+        if (depositResponse.data && depositResponse.data.status) {
+          const deposits = depositResponse.data.data?.result || depositResponse.data.data || [];
+          // Calculate total deposits by summing up all deposit amounts
+          const totalDepositAmount = deposits.reduce((total, deposit) => {
+            // Only count approved deposits (status 1 or 2)
+            if (deposit.status === 1 || deposit.status === 2) {
+              return total + parseFloat(deposit.amount || 0);
+            }
+            return total;
+          }, 0);
+          setTotalDeposits(totalDepositAmount);
+        } else {
+          // Fallback to total_investment if API fails
+          setTotalDeposits(parseFloat(user?.total_investment || 0));
+        }
+
+        // Fetch all withdrawals
+        const withdrawalResponse = await axios.get('/get-all-withdrawals');
+        if (withdrawalResponse.data && withdrawalResponse.data.status) {
+          const withdrawals = withdrawalResponse.data.data?.result || withdrawalResponse.data.data || [];
+          // Calculate total withdrawals by summing up all withdrawal amounts
+          const totalWithdrawalAmount = withdrawals.reduce((total, withdrawal) => {
+            // Only count approved withdrawals (status 1)
+            if (withdrawal.status === 1) {
+              return total + parseFloat(withdrawal.amount || 0);
+            }
+            return total;
+          }, 0);
+          setTotalWithdrawals(totalWithdrawalAmount);
+        } else {
+          // Fallback to wallet_withdraw if API fails
+          setTotalWithdrawals(parseFloat(user?.wallet_withdraw || 0));
+        }
+      } catch (error) {
+        console.error('Error fetching transaction totals:', error);
+        // Fallback to user object values
+        setTotalDeposits(parseFloat(user?.total_investment || 0));
+        setTotalWithdrawals(parseFloat(user?.wallet_withdraw || 0));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTransactionTotals();
+  }, [user]);
+
   // Handle tab change
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = (_event, newValue) => {
     setTabValue(newValue);
   };
 
@@ -240,7 +306,7 @@ export default function TransactionHistory() {
                         Total Deposits
                       </Typography>
                       <Typography variant="h4" color="success.main">
-                        ${parseFloat(user?.extra?.deposits || 0).toFixed(2)}
+                        ${isLoading ? '...' : parseFloat(user?.extra?.deposits || totalDeposits || user?.total_investment || 0).toFixed(2)}
                       </Typography>
                     </Box>
                   </Stack>
@@ -276,7 +342,7 @@ export default function TransactionHistory() {
                         Total Withdrawals
                       </Typography>
                       <Typography variant="h4" color="error.main">
-                        ${parseFloat(user?.extra?.withdrawals || 0).toFixed(2)}
+                        ${isLoading ? '...' : parseFloat(user?.extra?.withdrawals || totalWithdrawals || user?.wallet_withdraw || 0).toFixed(2)}
                       </Typography>
                     </Box>
                   </Stack>

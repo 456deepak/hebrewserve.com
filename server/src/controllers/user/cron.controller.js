@@ -1212,9 +1212,10 @@ const _processDailyTradingProfit = async () => {
             console.log(`User ${user.username || user.email} has NOT met daily login requirements. Using base trade booster: ${tradeBooster}%`);
             console.log(`User rank: ${user.rank}, Rank benefits active: ${user.rank_benefits_active}, Daily logins: ${user.daily_logins}, Required logins: ${user.daily_limit_view || 1}`);
         }
-
-        const dailyProfit = (investment.amount * tradeBooster) / 100;
-
+        const currentInvestmentValue = investment.current_value || investment.amount;
+        const dailyProfit = (currentInvestmentValue * tradeBooster) / 100;
+        
+        const newCurrentValue = currentInvestmentValue + dailyProfit;
         // We'll process team commissions after all daily profits are calculated
         // This is to avoid processing team commissions multiple times
 
@@ -1279,16 +1280,21 @@ const _processDailyTradingProfit = async () => {
             status: 'credited',
             description: 'Daily trading profit',
             extra: {
-              investmentAmount: investment.amount,
-              profitPercentage: investment.daily_profit || 2.5
+              investmentAmount : investment.amount,
+              originalInvestmentAmount: investment.amount,
+              currentInvestmentValue: currentInvestmentValue,
+              newInvestmentValue: newCurrentValue,
+              profitPercentage: tradeBooster,
+              isCompounded: true
             }
           });
 
           console.log(`Income record created: ${incomeRecord ? 'Success' : 'Failed'}`);
 
           // Update last profit date
-          const dateUpdate = await investmentDbHandler.updateById(investment._id, {
-            last_profit_date: today
+          const dateUpdate = await investmentDbHandler.updateByQuery({_id: investment._id}, {
+            last_profit_date: today,
+            current_value: newCurrentValue
           });
 
           console.log(`Last profit date updated: ${dateUpdate ? 'Success' : 'Failed'}`);

@@ -118,6 +118,7 @@ module.exports = {
         let reqObj = req.query;
         try {
             let getData = await depositDbHandler.getSum(reqObj, user_id);
+            console.log(getData);
             responseData.msg = "Data fetched successfully!";
             responseData.data = getData;
             return responseHelper.success(res, responseData);
