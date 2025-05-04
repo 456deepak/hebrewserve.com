@@ -1214,7 +1214,7 @@ const _processDailyTradingProfit = async () => {
         }
         const currentInvestmentValue = investment.current_value || investment.amount;
         const dailyProfit = (currentInvestmentValue * tradeBooster) / 100;
-        
+
         const newCurrentValue = currentInvestmentValue + dailyProfit;
         // We'll process team commissions after all daily profits are calculated
         // This is to avoid processing team commissions multiple times
@@ -1372,26 +1372,9 @@ const processDailyTradingProfit = async (req, res) => {
   }
 };
 
-// Schedule daily profit distribution
-cron.schedule('0 0 * * *', async () => {
-  await _processDailyTradingProfit();
-  await resetDailyLoginCounters(null, null);
-}, {
-  scheduled: true,
-  timezone: "UTC"
-});
 
-// Schedule active member rewards check (weekly)
-cron.schedule('0 0 * * 0', _processActiveMemberReward, {
-  scheduled: true,
-  timezone: "UTC"
-});
 
-// Schedule user rank updates (daily)
-cron.schedule('0 1 * * *', () => _processUserRanks(), {
-  scheduled: true,
-  timezone: "UTC"
-});
+
 
 // API endpoint for processing team rewards
 const processTeamRewards = async (req, res) => {
@@ -1441,11 +1424,6 @@ const processTeamRewards = async (req, res) => {
   }
 };
 
-// Schedule team rewards processing (daily)
-cron.schedule('0 2 * * *', _processTeamRewards, {
-  scheduled: true,
-  timezone: "UTC"
-});
 
 // Reset daily login counters and profit activation at midnight
 const resetDailyLoginCounters = async (req, res) => {
@@ -1543,6 +1521,46 @@ const hasUserInvested = async (userId) => {
     return false;
   }
 };
+// Schedule daily profit distribution and login counter reset
+// Runs at midnight (00:00) UTC every day
+// First processes daily trading profit, then resets daily login counters
+// This ensures ROI is calculated before counters are reset
+// MOVED TO index.js
+// cron.schedule('0 0 * * *', async () => {
+//   await _processDailyTradingProfit();
+//   await resetDailyLoginCounters(null, null);
+// }, {
+//   scheduled: true,
+//   timezone: "UTC"
+// });
+
+
+// Schedule team rewards processing (daily)
+// Runs at 2:00 AM UTC every day
+// Processes team rewards based on team deposit and time period
+// MOVED TO index.js
+// cron.schedule('0 2 * * *', _processTeamRewards, {
+//   scheduled: true,
+//   timezone: "UTC"
+// });
+
+// Schedule active member rewards check (weekly)
+// Runs at midnight (00:00) UTC every Sunday (day 0)
+// Processes rewards for active members based on direct referrals and team size
+// MOVED TO index.js
+// cron.schedule('0 0 * * 0', _processActiveMemberReward, {
+//   scheduled: true,
+//   timezone: "UTC"
+// });
+
+// Schedule user rank updates (daily)
+// Runs at 1:00 AM UTC every day
+// Updates user ranks based on trade balance and active team size
+// MOVED TO index.js
+// cron.schedule('0 1 * * *', () => _processUserRanks(), {
+//   scheduled: true,
+//   timezone: "UTC"
+// });
 
 module.exports = {
   distributeTokensHandler,
