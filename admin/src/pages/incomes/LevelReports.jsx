@@ -51,7 +51,7 @@ export default function TeamCommission() {
         header: 'Daily Profit',
         accessorKey: 'extra.dailyProfit',
         cell: (props) => {
-          const value = props.getValue() || 0;
+          const value = props?.getValue() || 0;
           return `$${parseFloat(value).toFixed(2)}`;
         }
       },

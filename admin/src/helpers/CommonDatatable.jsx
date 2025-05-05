@@ -1,17 +1,17 @@
 import PropTypes from 'prop-types';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // material-ui
 import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
-import TableContainer from '@mui/material/TableContainer';
 import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Stack from '@mui/material/Stack';
-import { Box, Divider, Alert, CircularProgress } from '@mui/material';
+import { Box, Divider, Alert, Skeleton } from '@mui/material';
 
 // third-party
 import {
@@ -32,35 +32,23 @@ import makeData from 'data/react-table';
 import MainCard from 'components/MainCard';
 import ScrollX from 'components/ScrollX';
 import { CSVExport, DebouncedInput, EmptyTable, Filter, TablePagination } from 'components/third-party/react-table';
-import LinearWithLabel from 'components/@extended/progress/LinearWithLabel';
 import axios from 'utils/axios';
 import { fetchWithRetry } from 'utils/axiosRetry';
-import { generateIncomeReportCacheKey } from 'utils/apiCache';
+import { generateIncomeReportCacheKey, getFromCache } from 'utils/apiCache';
 
 export const fuzzyFilter = (row, columnId, value, addMeta) => {
-  // rank the item
   const itemRank = rankItem(row.getValue(columnId), value);
-
-  // store the ranking info
   addMeta(itemRank);
-
-  // return if the item should be filtered in/out
   return itemRank.passed;
 };
 
 export const fuzzySort = (rowA, rowB, columnId) => {
   let dir = 0;
-
-  // only sort by rank if the column has ranking information
   if (rowA.columnFiltersMeta[columnId]) {
     dir = compareItems(rowA.columnFiltersMeta[columnId], rowB.columnFiltersMeta[columnId]);
   }
-
-  // provide an alphanumeric fallback for when the item ranks are equal
   return dir === 0 ? sortingFns.alphanumeric(rowA, rowB, columnId) : dir;
 };
-
-// ==============================|| REACT TABLE ||============================== //
 
 export default function ReactTable({ apiPoint, type, columns, noQueryStrings, team, refreshData }) {
   const [columnFilters, setColumnFilters] = useState([]);
@@ -68,110 +56,151 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const top = false;
+  const [currentPage, setCurrentPage] = useState(0);
 
   const changeToSingleDimension = async (data) => {
     try {
-      let list = []
+      let list = [];
       for (let i = 0; i < data.length; i++) {
         for (let j = 0; j < data[i].length; j++) {
-          list.push({ level: i, _id: data[i][j].id, ...data[i][j] })
+          list.push({ level: i, _id: data[i][j].id, ...data[i][j] });
         }
       }
-      return list
+      return list;
     } catch (error) {
-      console.error(error)
+      console.error(error);
       return [];
     }
-  }
+  };
 
-  const fetchReports = async (page) => {
+  const fetchAllPages = async () => {
     setLoading(true);
     setError(null);
-
+    
     try {
-      // Generate cache key
-      const cacheKey = generateIncomeReportCacheKey(apiPoint, type, page);
+      // First page request
+      let initialUrl = `/${apiPoint}${noQueryStrings ? '' : `?page=1&type=${type}`}`;
+      const cacheKey = generateIncomeReportCacheKey(apiPoint, type, 1);
+      
+      // Try to get first page from cache
+      const cachedFirstPage = getFromCache(cacheKey);
+      
+      // If we have cached first page, show it immediately
+      if (cachedFirstPage) {
+        let initialData = noQueryStrings ? cachedFirstPage.result : cachedFirstPage.result?.list || [];
+        if (team && noQueryStrings) {
+          initialData = await changeToSingleDimension(initialData);
+        }
+        setData(initialData);
+        
+        // Continue with remaining pages in background
+        fetchRemainingPages(cachedFirstPage, initialData);
+        return;
+      }
+      
+      // No cache, fetch first page
+      const initialResponse = await fetchWithRetry(initialUrl, {}, cacheKey);
+      
+      if (!initialResponse?.status) {
+        throw new Error('Invalid response from server');
+      }
+      
+      let initialData = noQueryStrings ? initialResponse.result : initialResponse.result?.list || [];
+      if (team && noQueryStrings) {
+        initialData = await changeToSingleDimension(initialData);
+      }
+      
+      // Show first page data immediately
+      setData(initialData);
+      
+      // Fetch remaining pages in background
+      fetchRemainingPages(initialResponse, initialData);
+      
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      setError(error.message || 'Failed to load data.');
+      setLoading(false);
+    }
+  };
 
-      // Prepare URL with query parameters
-      let queryStrings = noQueryStrings ? "" : `?page=${page}&type=${type}`;
-      const url = `/${apiPoint}${queryStrings}`;
-
-      // Fetch data with retry and caching
-      const response = await fetchWithRetry(url, {}, cacheKey);
-
-      // Debug the response structure
-      console.log('API Response:', response);
-
-      if (!response?.status) {
-        console.error('Invalid response structure:', response);
-        setError('Invalid response from server');
+  const fetchRemainingPages = async (initialResponse, initialData) => {
+    try {
+      let totalPages = noQueryStrings ? 1 : parseInt(initialResponse.result?.totalPages || 0);
+      
+      // If only one page, we're done
+      if (totalPages <= 1) {
         setLoading(false);
         return;
       }
-
-      if (noQueryStrings) {
-        let responseData = response?.result;
-        console.log('Response data (noQueryStrings):', responseData);
-        if (team) {
-          responseData = await changeToSingleDimension(responseData);
-        }
-        setData(responseData || []);
-        setLoading(false);
-      } else {
-        // Add new data to existing data
-        const listData = response?.result?.list || [];
-        console.log('List data:', listData);
-
-        setData((old) => [...old, ...listData]);
-
-        // Only fetch next page if we haven't reached the total pages
-        const totalPages = parseInt(response?.result?.totalPages || 0);
-        if (page < totalPages) {
-          fetchReports(page + 1);
-        } else {
-          setLoading(false);
-        }
+      
+      // Fetch remaining pages in parallel
+      let requests = [];
+      for (let page = 2; page <= totalPages; page++) {
+        const pageUrl = `/${apiPoint}?page=${page}&type=${type}`;
+        const pageCacheKey = generateIncomeReportCacheKey(apiPoint, type, page);
+        requests.push(fetchWithRetry(pageUrl, {}, pageCacheKey));
       }
+      
+      // Process pages as they complete
+      const responses = await Promise.all(requests);
+      let allData = [...initialData];
+      
+      for (let res of responses) {
+        let pageData = res?.result?.list || [];
+        if (team && noQueryStrings) {
+          pageData = await changeToSingleDimension(pageData);
+        }
+        allData.push(...pageData);
+      }
+      
+      setData(allData);
     } catch (error) {
-      console.error('Error fetching reports:', error);
-      setError(error.message || 'Failed to load data. Please try again later.');
+      console.error('Error fetching remaining pages:', error);
+      setError((prevError) => prevError || error.message || 'Failed to load all data.');
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Clear existing data before fetching new data
     setData([]);
-    fetchReports(1);
-  }, [apiPoint, type, refreshData]); // Refresh when apiPoint, type, or refreshData changes
+    fetchAllPages();
+  }, [apiPoint, type, refreshData]);
+
+  const [pageSize, setPageSize] = useState(25);
 
   const table = useReactTable({
     data,
     columns,
-    state: { columnFilters, globalFilter },
+    state: {
+      columnFilters,
+      globalFilter,
+      pagination: {
+        pageSize,
+        pageIndex: currentPage
+      }
+    },
+    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedMinMaxValues: getFacetedMinMaxValues(),
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
     getPaginationRowModel: getPaginationRowModel(),
     globalFilterFn: fuzzyFilter,
-    // rowCount,
-    // initialState: {
-    //   pagination
-    // },
-    // pageCount
+    onPaginationChange: (updater) => {
+      const newPagination = typeof updater === 'function' 
+        ? updater(table.getState().pagination) 
+        : updater;
+      setCurrentPage(newPagination.pageIndex);
+    }
   });
 
   let headers = [];
   table.getAllColumns().map((columns) =>
     headers.push({
       label: typeof columns.columnDef.header === 'string' ? columns.columnDef.header : '#',
-      // @ts-ignore
       key: columns.columnDef.accessorKey
     })
   );
@@ -200,9 +229,35 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
 
       <ScrollX>
         {loading && data.length === 0 ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 5 }}>
-            <CircularProgress />
-            <Box sx={{ ml: 2 }}>Loading data...</Box>
+          <Box sx={{ p: 2 }}>
+            <Paper>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>#</TableCell>
+                    {columns.map((col, index) => (
+                      <TableCell key={index}>
+                        <Skeleton variant="text" width={100} />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[...Array(5)].map((_, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>
+                        <Skeleton variant="text" width={20} />
+                      </TableCell>
+                      {columns.map((_, index) => (
+                        <TableCell key={index}>
+                          <Skeleton variant="text" width="80%" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
           </Box>
         ) : (
           <TableContainer component={Paper}>
@@ -234,9 +289,8 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
               <TableBody>
                 {loading && data.length > 0 && (
                   <TableRow>
-                    <TableCell colSpan={table.getAllColumns().length + 1} sx={{ textAlign: 'center', py: 2 }}>
-                      <CircularProgress size={24} sx={{ mr: 1 }} />
-                      Loading more data...
+                    <TableCell colSpan={table.getAllColumns().length + 1}>
+                      <Skeleton variant="rectangular" height={40} />
                     </TableCell>
                   </TableRow>
                 )}
@@ -263,16 +317,25 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
           </TableContainer>
         )}
 
-        {!top && data.length > 0 && (
+        {data.length > 0 && (
           <>
             <Divider />
             <Box sx={{ p: 2 }}>
               <TablePagination
                 {...{
-                  setPageSize: table.setPageSize,
-                  setPageIndex: table.setPageIndex,
+                  setPageSize: (size) => {
+                    const allowed = [25, 50, 100, 250];
+                    if (!allowed.includes(size)) size = allowed[0];
+                    setPageSize(size);
+                    table.setPageSize(size);
+                  },
+                  setPageIndex: (index) => {
+                    setCurrentPage(index);
+                    table.setPageIndex(index);
+                  },
                   getState: table.getState,
-                  getPageCount: table.getPageCount
+                  getPageCount: table.getPageCount,
+                  rowsPerPageOptions: [25, 50, 100, 250]
                 }}
               />
             </Box>
@@ -283,13 +346,11 @@ export default function ReactTable({ apiPoint, type, columns, noQueryStrings, te
   );
 }
 
-// FilteringTable.propTypes = { getValue: PropTypes.func };
-
 ReactTable.propTypes = {
   columns: PropTypes.array,
   apiPoint: PropTypes.string.isRequired,
   type: PropTypes.number,
   noQueryStrings: PropTypes.bool,
   team: PropTypes.bool,
-  refreshData: PropTypes.any // Any value that changes to trigger a refresh
+  refreshData: PropTypes.any
 };

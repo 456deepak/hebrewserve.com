@@ -29,9 +29,7 @@ function NumberInput({ columnFilterValue, getFacetedMinMaxValues, setFilterValue
         size="small"
         startAdornment={false}
       />
-      <>
-        <Minus size="32" color="#FF8A65" variant="Outline" />
-      </>
+      <Minus size="32" color="#FF8A65" variant="Outline" />
       <DebouncedInput
         type="number"
         value={columnFilterValue?.[1] ?? ''}
@@ -67,8 +65,18 @@ function TextInput({ columnId, columnFilterValue, header, setFilterValue }) {
 
 // ==============================|| FILTER - INPUT ||============================== //
 
+// Utility function to safely access nested values
+function getNestedValue(obj, path) {
+  return path.split('.').reduce((acc, key) => (acc && typeof acc === 'object' ? acc[key] : undefined), obj);
+}
+
 export default function Filter({ column, table }) {
-  const firstValue = table.getPreFilteredRowModel().flatRows[0]?.getValue(column.id);
+  const firstRow = table?.getPreFilteredRowModel()?.flatRows[0];
+  const columnId = column.id;
+
+  const firstValue = columnId.includes('.')
+    ? getNestedValue(firstRow?.original, columnId)
+    : firstRow?.getValue(columnId);
 
   const columnFilterValue = column.getFilterValue();
 
@@ -80,7 +88,7 @@ export default function Filter({ column, table }) {
     />
   ) : (
     <TextInput
-      columnId={column.id}
+      columnId={columnId}
       columnFilterValue={columnFilterValue}
       setFilterValue={column.setFilterValue}
       header={column.columnDef.header}
@@ -88,7 +96,13 @@ export default function Filter({ column, table }) {
   );
 }
 
-NumberInput.propTypes = { columnFilterValue: PropTypes.number, getFacetedMinMaxValues: PropTypes.func, setFilterValue: PropTypes.func };
+// ==============================|| PROP TYPES ||============================== //
+
+NumberInput.propTypes = {
+  columnFilterValue: PropTypes.oneOfType([PropTypes.array, PropTypes.number]),
+  getFacetedMinMaxValues: PropTypes.func,
+  setFilterValue: PropTypes.func
+};
 
 TextInput.propTypes = {
   columnId: PropTypes.string,
@@ -97,4 +111,7 @@ TextInput.propTypes = {
   setFilterValue: PropTypes.func
 };
 
-Filter.propTypes = { column: PropTypes.object, table: PropTypes.object };
+Filter.propTypes = {
+  column: PropTypes.object,
+  table: PropTypes.object
+};
