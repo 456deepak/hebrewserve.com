@@ -61,6 +61,7 @@
     "immutability-helper": "^3.1.1",
     "jwt-decode": "^4.0.0",
     "lodash": "^4.17.21",
+    "lru-cache": "^11.1.0",
     "mapbox-gl": "^3.2.0",
     "match-sorter": "^6.3.4",
     "moment": "^2.30.1",

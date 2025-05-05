@@ -45,7 +45,7 @@ const PageLoadingIndicator = () => {
   
   // Don't render anything if not showing indicator
   if (!showIndicator) return null;
-  
+  if(showIndicator)return null;
   return (
     <Fade in={showIndicator}>
       <Box
@@ -65,7 +65,7 @@ const PageLoadingIndicator = () => {
         }}
       >
         <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
-        <Typography variant="body2">Loading page...</Typography>
+        {/* <Typography variant="body2">Loading page...</Typography> */}
       </Box>
     </Fade>
   );
