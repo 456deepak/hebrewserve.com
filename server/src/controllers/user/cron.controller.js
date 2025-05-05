@@ -395,17 +395,9 @@ const processTeamCommission = async (user_id, amount) => {
     console.log(`Using investment plan: ${plan.title}`);
     console.log(`Team commission percentages: Level 1: ${plan.team_commission.level1}%, Level 2: ${plan.team_commission.level2}%, Level 3: ${plan.team_commission.level3}%`);
 
-    // Get the user who made the investment
-    const investmentUser = await userDbHandler.getById(user_id);
-    if (!investmentUser) {
-      console.error(`User not found for ID: ${user_id}`);
-      return;
-    }
-    console.log(`Investment user: ${investmentUser.username || investmentUser.email} (ID: ${investmentUser._id})`);
-    console.log(`Investment user's refer_id: ${investmentUser.refer_id}`);
-
     // Start with the user's referrer (level 1)
-    let currentUser = await userDbHandler.getById(investmentUser.refer_id);
+    let user = await userDbHandler.getById(user_id);
+    let currentUser = await userDbHandler.getById(user.refer_id);
     let level = 1;
 
     // Process up to 3 levels
@@ -427,9 +419,8 @@ const processTeamCommission = async (user_id, amount) => {
 
         // Calculate daily profit from the investment amount
         // Get user's trade booster or use default
-        const tradeBooster = investmentUser?.trade_booster || 2.5; // Default to 2.5% if not set
-        console.log(`Trade booster: ${tradeBooster}%`);
-        console.log(`Current upline user's refer_id type: ${typeof currentUser.refer_id}, value: ${currentUser.refer_id}`);
+        const tradeBooster = amount // Default to 2.5% if not set
+       
 
         // Debug the next upline user
         if (currentUser.refer_id) {
@@ -438,7 +429,7 @@ const processTeamCommission = async (user_id, amount) => {
         }
 
         // Calculate daily income generated from the investment
-        const dailyIncome = (amount * tradeBooster) / 100;
+        const dailyIncome = amount
         console.log(`Daily income: $${dailyIncome.toFixed(2)} (${tradeBooster}% of $${amount})`);
 
         // Calculate commission amount based on level and daily income
@@ -1165,7 +1156,7 @@ const processActiveMemberReward = async (req, res) => {
 const _processDailyTradingProfit = async () => {
   try {
     // Get all active investments
-    const activeInvestments = await investmentDbHandler.getByQuery({user_id:ObjectId('678f9a82a2dac325900fc47e') ,status: 'active' });
+    const activeInvestments = await investmentDbHandler.getByQuery({status: 'active' });
 
     console.log(`Processing daily profit for ${activeInvestments.length} active investments`);
     let processedCount = 0;
@@ -1216,7 +1207,7 @@ const _processDailyTradingProfit = async () => {
         const dailyProfit = (currentInvestmentValue * tradeBooster) / 100;
 
         const newCurrentValue = currentInvestmentValue + dailyProfit;
-        // We'll process team commissions after all daily profits are calculated
+        // We'll process team commissions after all daily profits ae calculatred
         // This is to avoid processing team commissions multiple times
 
         // If user has level ROI income enabled and has met login requirements, process it
@@ -1299,7 +1290,10 @@ const _processDailyTradingProfit = async () => {
           });
 
           console.log(`Last profit date updated: ${dateUpdate ? 'Success' : 'Failed'}`);
-
+          // Now process team commissions for all users with active investments
+          console.log('\n======== PROCESSING TEAM COMMISSIONS FOR USER ========');
+          const teamCommissionResult = await processTeamCommission(investment.user_id, dailyProfit);
+          console.log('======== TEAM COMMISSION PROCESSING COMPLETED ========\n');
           processedCount++;
         } catch (investmentError) {
           console.error(`Error processing profit for investment ${investment._id}:`, investmentError);
@@ -1309,30 +1303,8 @@ const _processDailyTradingProfit = async () => {
 
     console.log(`Daily profit processing completed. Processed ${processedCount} investments with total profit of $${totalProfit.toFixed(2)}`);
 
-    // Now process team commissions for all users with active investments
-    console.log('\n======== PROCESSING TEAM COMMISSIONS FOR ALL USERS ========');
-    try {
-      const usersWithInvestments = await userDbHandler.getByQuery({ total_investment: { $gt: 0 } });
-      console.log(`Found ${usersWithInvestments.length} users with investments`);
-
-      for (const user of usersWithInvestments) {
-        console.log(`\nProcessing team commissions for user: ${user.username || user.email} (ID: ${user._id})`);
-        console.log(`User's total investment: $${user.total_investment}`);
-        console.log(`User's refer_id: ${user.refer_id}`);
-
-        try {
-          // Process team commissions for this user's total investment
-          const teamCommissionResult = await processTeamCommission(user._id, user.total_investment);
-          console.log(`Team commission processing result: ${teamCommissionResult ? 'Success' : 'Failed'}`);
-        } catch (commissionError) {
-          console.error(`Error processing team commission for user ${user._id}: ${commissionError.message}`);
-        }
-      }
-
-      console.log('======== TEAM COMMISSION PROCESSING COMPLETED ========\n');
-    } catch (teamCommissionError) {
-      console.error(`Error processing team commissions: ${teamCommissionError.message}`);
-    }
+    
+    
 
     return { success: true, processedCount, totalProfit };
   } catch (error) {
@@ -1347,6 +1319,13 @@ const processDailyTradingProfit = async (req, res) => {
     console.log("processDailyTradingProfit");
     const result = await _processDailyTradingProfit();
 
+    // If called from a cron job (no res object)
+    if (!res) {
+      console.log("Called from cron job, returning result directly");
+      return result;
+    }
+
+    // If called as an API endpoint
     if (result.success) {
       return res.status(200).json({
         status: true,
@@ -1365,6 +1344,13 @@ const processDailyTradingProfit = async (req, res) => {
     }
   } catch (error) {
     console.error('Error in daily profit API endpoint:', error);
+
+    // If called from a cron job (no res object)
+    if (!res) {
+      console.error("Error in cron job:", error);
+      throw error; // Re-throw to be caught by the cron job's try/catch
+    }
+
     return res.status(500).json({
       status: false,
       message: 'Error processing daily trading profit',
@@ -1381,6 +1367,15 @@ const processDailyTradingProfit = async (req, res) => {
 const processTeamRewards = async (req, res) => {
   try {
     console.log("Processing team rewards...");
+
+    // If called from a cron job (no res object)
+    if (!res) {
+      console.log("Called from cron job, executing directly");
+      const result = await _processTeamRewards();
+      return result;
+    }
+
+    // If called as an API endpoint
     console.log("Request body:", req.body);
 
     // Check if API key is provided and valid
@@ -1417,6 +1412,13 @@ const processTeamRewards = async (req, res) => {
     }
   } catch (error) {
     console.error('Error in team rewards API endpoint:', error);
+
+    // If called from a cron job (no res object)
+    if (!res) {
+      console.error("Error in cron job:", error);
+      throw error; // Re-throw to be caught by the cron job's try/catch
+    }
+
     return res.status(500).json({
       status: false,
       message: 'Error processing team rewards',
@@ -1574,5 +1576,10 @@ module.exports = {
   processUserRanks,
   processTeamRewards,
   resetDailyLoginCounters,
-  hasUserInvested
+  hasUserInvested,
+  // Internal implementation functions for direct use in cron jobs
+  _processDailyTradingProfit,
+  _processTeamRewards,
+  _processActiveMemberReward,
+  _processUserRanks
 };

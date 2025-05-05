@@ -373,16 +373,6 @@ module.exports = {
                 throw new Error(`Failed to update wallet_topup: ${walletError.message}`);
             }
 
-            // Process team commission
-            try {
-                console.log('Processing team commission for trading package investment');
-                const teamCommissionResult = await processTeamCommission(user_id, amount);
-                console.log('Team commission processing result:', teamCommissionResult ? 'Success' : 'Failed');
-            } catch (commissionError) {
-                console.error('Error processing team commission:', commissionError);
-                // Don't throw error here to allow the investment to complete
-            }
-
             // Update first deposit bonus income with investment ID if applicable
             if (firstDepositBonus > 0) {
                 console.log('Updating first deposit bonus income with investment ID');
