@@ -1,7 +1,7 @@
 'use strict';
 const logger = require('../../services/logger');
 const log = new logger('InveatmentController').getChildLogger();
-const { investmentDbHandler, investmentPlanDbHandler, userDbHandler, incomeDbHandler, settingDbHandler } = require('../../services/db');
+const { investmentDbHandler, investmentPlanDbHandler, userDbHandler, incomeDbHandler, settingDbHandler, releaseDbHandler } = require('../../services/db');
 const { getTopLevelByRefer } = require('../../services/commonFun');
 const responseHelper = require('../../utils/customResponse');
 const config = require('../../config/config');
@@ -27,6 +27,7 @@ const createTradingPackageInvestment = async (user_id, amount, plan) => {
             user_id,
             investment_plan_id: plan._id,
             amount: amount,
+            current_value: amount,
             daily_profit: plan.percentage || 2.5,
             status: 'active',
             package_type: 'trading',
@@ -929,5 +930,143 @@ module.exports = {
         }
     },
 
+    // Get all release records for a user
+    getAllReleases: async (req, res) => {
+        let responseData = {};
+        let user = req.user;
+        let user_id = user.sub;
+        let reqObj = req.query;
+        try {
+            let releases = await releaseDbHandler.getAll(reqObj, user_id);
+            responseData.msg = "Release records fetched successfully";
+            responseData.data = releases;
+            return responseHelper.success(res, responseData);
+        } catch (error) {
+            log.error('Failed to fetch release records:', error);
+            responseData.msg = "Failed to fetch release records";
+            return responseHelper.error(res, responseData);
+        }
+    },
+
+    // Get release summary for a user
+    getReleaseSum: async (req, res) => {
+        let responseData = {};
+        let user = req.user;
+        let user_id = user.sub;
+        let reqObj = req.query;
+        try {
+            let sumData = await releaseDbHandler.getSum(reqObj, user_id);
+            responseData.msg = "Release summary fetched successfully";
+            responseData.data = sumData;
+            return responseHelper.success(res, responseData);
+        } catch (error) {
+            log.error('Failed to fetch release summary:', error);
+            responseData.msg = "Failed to fetch release summary";
+            return responseHelper.error(res, responseData);
+        }
+    },
+
+    // Release funds from investment
+    releaseInvestment: async (req, res) => {
+        let responseData = {};
+        try {
+            const { investment_id, amount } = req.body;
+            console.log(investment_id,amount)
+            const user_id = req.user.sub;
+
+            // Validate input
+            if (!investment_id || !amount) {
+                responseData.msg = "Investment ID and amount are required";
+                return responseHelper.error(res, responseData);
+            }
+
+            // Parse amount to ensure it's a number
+            const releaseAmount = parseFloat(amount);
+            if (isNaN(releaseAmount) || releaseAmount <= 0) {
+                responseData.msg = "Release amount must be a positive number";
+                return responseHelper.error(res, responseData);
+            }
+
+            // Get the investment
+            const investment = await investmentDbHandler.getById(investment_id);
+            if (!investment) {
+                responseData.msg = "Investment not found";
+                return responseHelper.error(res, responseData);
+            }
+
+            // Verify the investment belongs to the user
+            if (investment.user_id.toString() !== user_id) {
+                responseData.msg = "Unauthorized access to this investment";
+                return responseHelper.error(res, responseData);
+            }
+
+            // Verify the investment is active
+            if (investment.status !== 'active' && investment.status !== 1) {
+                responseData.msg = "Only active investments can be released";
+                return responseHelper.error(res, responseData);
+            }
+
+            // Verify the investment has enough value to release
+            const currentValue = investment.current_value || investment.amount;
+            if (releaseAmount > currentValue) {
+                responseData.msg = `Cannot release more than the current value of $${currentValue.toFixed(2)}`;
+                return responseHelper.error(res, responseData);
+            }
+
+            // Calculate new current value
+            const newCurrentValue = currentValue - releaseAmount;
+
+            // Update investment current value
+            await investmentDbHandler.updateById(investment_id, {
+                current_value: newCurrentValue
+            });
+
+            // Update user wallet
+            const walletUpdate = await userDbHandler.updateOneByQuery(
+                { _id: user_id },
+                {
+                    $inc: {
+                        wallet: releaseAmount
+                    }
+                }
+            );
+
+            // Verify the wallet update was successful
+            if (!walletUpdate || !walletUpdate.acknowledged || walletUpdate.modifiedCount === 0) {
+                // Revert the investment update if wallet update failed
+                await investmentDbHandler.updateById(investment_id, {
+                    current_value: currentValue
+                });
+                throw new Error('Wallet update failed');
+            }
+
+            // Create release record in the new release collection
+            await releaseDbHandler.create({
+                user_id: ObjectId(user_id),
+                investment_id: investment._id,
+                amount: releaseAmount,
+                previous_value: currentValue,
+                new_value: newCurrentValue,
+                original_investment_amount: investment.amount,
+                status: 'completed',
+                description: 'Investment funds released to wallet',
+                extra: {
+                    release_date: new Date(),
+                    investment_type: investment.package_type || 'trading'
+                }
+            });
+
+            responseData.msg = "Funds released successfully";
+            responseData.data = {
+                released_amount: releaseAmount,
+                new_current_value: newCurrentValue
+            };
+            return responseHelper.success(res, responseData);
+        } catch (error) {
+            log.error('Failed to release investment funds:', error);
+            responseData.msg = "Failed to release funds: " + (error.message || error);
+            return responseHelper.error(res, responseData);
+        }
+    }
 
 };

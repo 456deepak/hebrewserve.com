@@ -288,20 +288,20 @@ export default function DashboardAnalytics() {
   // };
 
   // Check local storage for activation state on component mount
-  useEffect(() => {
-    // We'll check user-specific localStorage items after we have the user data
-    // This is just to clean up any old format items
-    const storedActivation = localStorage.getItem('dailyProfitActivated');
-    const storedDate = localStorage.getItem('activationDate');
+  // useEffect(() => {
+  //   // We'll check user-specific localStorage items after we have the user data
+  //   // This is just to clean up any old format items
+  //   const storedActivation = localStorage.getItem('dailyProfitActivated');
+  //   const storedDate = localStorage.getItem('activationDate');
 
-    // Remove old format items if they exist
-    if (storedActivation) {
-      localStorage.removeItem('dailyProfitActivated');
-    }
-    if (storedDate) {
-      localStorage.removeItem('activationDate');
-    }
-  }, []);
+  //   // Remove old format items if they exist
+  //   if (storedActivation) {
+  //     localStorage.removeItem('dailyProfitActivated');
+  //   }
+  //   if (storedDate) {
+  //     localStorage.removeItem('activationDate');
+  //   }
+  // }, []);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -323,26 +323,26 @@ export default function DashboardAnalytics() {
           console.log('Dashboard data received:', userData);
 
           // Check if we received valid user data
-          if (!userData || Object.keys(userData).length === 0) {
-            console.warn('Received empty user data from API');
-            // Set default user data
-            const defaultUserData = {
-              wallet: 0,
-              total_investment: 0,
-              total_earnings: 0,
-              daily_profit: 0,
-              first_deposit_bonus: 0,
-              referral_bonus: 0,
-              team_commission: 0,
-              direct_referrals: 0,
-              active_member_reward: 0,
-              username: 'User',
-              sponsorID: 'admin',
-              dailyProfitActivated: false
-            };
-            setUserData(defaultUserData);
-            throw new Error('Empty user data received');
-          }
+          // if (!userData || Object.keys(userData).length === 0) {
+          //   console.warn('Received empty user data from API');
+          //   // Set default user data
+          //   const defaultUserData = {
+          //     wallet: 0,
+          //     total_investment: 0,
+          //     total_earnings: 0,
+          //     daily_profit: 0,
+          //     first_deposit_bonus: 0,
+          //     referral_bonus: 0,
+          //     team_commission: 0,
+          //     direct_referrals: 0,
+          //     active_member_reward: 0,
+          //     username: 'User',
+          //     sponsorID: 'admin',
+          //     dailyProfitActivated: false
+          //   };
+          //   setUserData(defaultUserData);
+          //   throw new Error('Empty user data received');
+          // }
 
           // Log the data received from the backend
           console.log('Dashboard data received from API:', userData);
@@ -367,27 +367,27 @@ export default function DashboardAnalytics() {
           //console.log('Initial activation status from database:', isActivated);
 
           // Only check localStorage if we have a userId
-          if (userId && !isActivated) {
-            // Check user-specific localStorage for today's activation
-            const storedActivation = localStorage.getItem(`dailyProfitActivated_${userId}`);
-            const storedDate = localStorage.getItem(`activationDate_${userId}`);
-            const today = new Date().toDateString();
+          // if (userId && !isActivated) {
+          //   // Check user-specific localStorage for today's activation
+          //   const storedActivation = localStorage.getItem(`dailyProfitActivated_${userId}`);
+          //   const storedDate = localStorage.getItem(`activationDate_${userId}`);
+          //   const today = new Date().toDateString();
 
-            // console.log(`Checking localStorage for user ${userId}:`, {
-            //   storedActivation,
-            //   storedDate,
-            //   today
-            // });
+          //   // console.log(`Checking localStorage for user ${userId}:`, {
+          //   //   storedActivation,
+          //   //   storedDate,
+          //   //   today
+          //   // });
 
-            // If we have a valid user-specific localStorage activation but server doesn't show it,
-            // update the userData to reflect the activation
-            if (storedActivation === 'true' && storedDate === today) {
-              // Set directly in user document
-              userData.dailyProfitActivated = true;
-              isActivated = true;
-              //console.log(`Using activation state from localStorage for user ${userId}`);
-            }
-          }
+          //   // If we have a valid user-specific localStorage activation but server doesn't show it,
+          //   // update the userData to reflect the activation
+          //   if (storedActivation === 'true' && storedDate === today) {
+          //     // Set directly in user document
+          //     userData.dailyProfitActivated = true;
+          //     isActivated = true;
+          //     //console.log(`Using activation state from localStorage for user ${userId}`);
+          //   }
+          // }
 
           // Set user data
 
@@ -405,41 +405,41 @@ export default function DashboardAnalytics() {
         console.error('Error fetching user profile:', error);
         console.error('Error details:', error.response ? error.response.data : 'No response data');
 
-        // Try to load default data if API fails
-        // Check if we have any user data in localStorage that we can use
-        const storedUserData = localStorage.getItem('userData');
-        let defaultUserData;
+        // // Try to load default data if API fails
+        // // Check if we have any user data in localStorage that we can use
+        // const storedUserData = localStorage.getItem('userData');
+        // let defaultUserData;
 
-        if (storedUserData) {
-          try {
-            defaultUserData = JSON.parse(storedUserData);
-            console.log('Using stored user data from localStorage:', defaultUserData);
-          } catch (e) {
-            console.error('Error parsing stored user data:', e);
-            defaultUserData = null;
-          }
-        }
+        // if (storedUserData) {
+        //   try {
+        //     defaultUserData = JSON.parse(storedUserData);
+        //     console.log('Using stored user data from localStorage:', defaultUserData);
+        //   } catch (e) {
+        //     console.error('Error parsing stored user data:', e);
+        //     defaultUserData = null;
+        //   }
+        // }
 
         // If no stored data or parsing failed, use default values
-        if (!defaultUserData) {
-          defaultUserData = {
-            wallet: 0,
-            total_investment: 0,
-            total_earnings: 0,
-            daily_profit: 0,
-            first_deposit_bonus: 0,
-            referral_bonus: 0,
-            team_commission: 0,
-            direct_referrals: 0,
-            active_member_reward: 0,
-            username: 'User',
-            sponsorID: 'admin',
-            dailyProfitActivated: false
-          };
-        }
+        // if (!defaultUserData) {
+        //   defaultUserData = {
+        //     wallet: 0,
+        //     total_investment: 0,
+        //     total_earnings: 0,
+        //     daily_profit: 0,
+        //     first_deposit_bonus: 0,
+        //     referral_bonus: 0,
+        //     team_commission: 0,
+        //     direct_referrals: 0,
+        //     active_member_reward: 0,
+        //     username: 'User',
+        //     sponsorID: 'admin',
+        //     dailyProfitActivated: false
+        //   };
+        // }
 
-        console.log('Loading default user data as fallback');
-        setUserData(defaultUserData);
+        // console.log('Loading default user data as fallback');
+        // setUserData(defaultUserData);
       } finally {
         setLoading(false);
       }

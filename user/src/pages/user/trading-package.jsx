@@ -40,6 +40,9 @@ const TradingPackage = () => {
   const navigate = useNavigate();
   const [amount, setAmount] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
+  const [openReleaseDialog, setOpenReleaseDialog] = useState(false);
+  const [selectedInvestment, setSelectedInvestment] = useState(null);
+  const [releaseAmount, setReleaseAmount] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [userInvestments, setUserInvestments] = useState([]);
@@ -133,8 +136,43 @@ const TradingPackage = () => {
     setError('');
   };
 
+  const handleOpenReleaseDialog = (investment) => {
+    // Check if investment has a positive current value
+    const currentValue = investment.current_value !== undefined ?
+      parseFloat(investment.current_value) : parseFloat(investment.amount);
+
+    if (currentValue <= 0) {
+      openSnackbar({
+        open: true,
+        message: 'This investment has no funds available to release',
+        variant: 'alert',
+        alert: {
+          color: 'warning'
+        }
+      });
+      return;
+    }
+
+    setSelectedInvestment(investment);
+    setReleaseAmount('');
+    setError('');
+    setOpenReleaseDialog(true);
+  };
+
+  const handleCloseReleaseDialog = () => {
+    setOpenReleaseDialog(false);
+    setSelectedInvestment(null);
+    setReleaseAmount('');
+    setError('');
+  };
+
   const handleAmountChange = (e) => {
     setAmount(e.target.value);
+    setError('');
+  };
+
+  const handleReleaseAmountChange = (e) => {
+    setReleaseAmount(e.target.value);
     setError('');
   };
 
@@ -194,6 +232,84 @@ const TradingPackage = () => {
       setLoading(false);
     }
   };
+  console.log(userInvestments)
+  const handleRelease = async () => {
+    // Validate amount
+    if (!selectedInvestment) {
+      setError('No investment selected');
+      return;
+    }
+   
+    const releaseValue = parseFloat(releaseAmount);
+    if (isNaN(releaseValue) || releaseValue <= 0) {
+      setError('Release amount must be a positive number');
+      return;
+    }
+
+    const currentValue = selectedInvestment.current_value || selectedInvestment.amount;
+    if (releaseValue > currentValue) {
+      setError(`Cannot release more than the current value of $${currentValue.toFixed(2)}`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Make API call to release funds from investment
+
+      const response = await axios.post('/release-investment', {
+        investment_id: selectedInvestment.id,
+        amount: releaseValue
+      });
+
+      if (response.data.status) {
+        openSnackbar({
+          open: true,
+          message: 'Funds released successfully!',
+          variant: 'alert',
+          alert: {
+            color: 'success'
+          }
+        });
+
+        // Update local state
+        const updatedInvestments = userInvestments.map(inv => {
+          if (inv._id === selectedInvestment._id) {
+            return {
+              ...inv,
+              current_value: response.data.new_current_value
+            };
+          }
+          return inv;
+        });
+
+        setUserInvestments(updatedInvestments);
+
+        // Update wallet balance
+        setUserWallet(userWallet + releaseValue);
+
+        // Show a special message if the investment is now fully released
+        if (response.data.new_current_value <= 0) {
+          openSnackbar({
+            open: true,
+            message: 'Investment fully released! All funds have been transferred to your wallet.',
+            variant: 'alert',
+            alert: {
+              color: 'info'
+            }
+          });
+        }
+
+        handleCloseReleaseDialog();
+      } else {
+        setError(response.data.message);
+      }
+    } catch (error) {
+      console.error('Release error:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Grid container spacing={3}>
@@ -242,16 +358,37 @@ const TradingPackage = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell>Amount</TableCell>
+                        <TableCell>Current Value</TableCell>
                         <TableCell>Date</TableCell>
                         <TableCell>Status</TableCell>
+                        <TableCell>Action</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {userInvestments.map((investment, index) => (
                         <TableRow key={index}>
                           <TableCell>${investment.amount}</TableCell>
+                          <TableCell>
+                            ${investment.current_value !== undefined && parseFloat(investment.current_value) <= 0
+                              ? '0.00'
+                              : (investment.current_value ? parseFloat(investment.current_value).toFixed(2) : parseFloat(investment.amount).toFixed(2))}
+                          </TableCell>
                           <TableCell>{new Date(investment.created_at).toLocaleDateString()}</TableCell>
                           <TableCell>{investment.status}</TableCell>
+                          <TableCell>
+                            {(investment.status === 'active' || investment.status === 1) &&
+                             (investment.current_value ? parseFloat(investment.current_value) > 0 : parseFloat(investment.amount) > 0) && (
+                              <Button
+                                variant="contained"
+                                color="secondary"
+                                size="small"
+                                onClick={() => handleOpenReleaseDialog(investment)}
+                                disabled={investment.current_value < 1}
+                              >
+                                {investment.current_value < 1 ? "Released" : "Release"}
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -264,6 +401,7 @@ const TradingPackage = () => {
           </Grid>
         </MainCard>
       </Grid>
+      {/* Investment Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>Invest in Trading Package</DialogTitle>
         <DialogContent>
@@ -306,6 +444,59 @@ const TradingPackage = () => {
             disabled={loading || !amount}
           >
             {loading ? 'Processing...' : 'Invest'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Release Dialog */}
+      <Dialog open={openReleaseDialog} onClose={handleCloseReleaseDialog}>
+        <DialogTitle>Release Investment Funds</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Enter the amount you want to release from this investment to your main wallet.
+            <br />
+            {selectedInvestment && (
+              <>
+                <strong>Investment amount: ${selectedInvestment.amount.toFixed(2)}</strong>
+                <br />
+                <strong>Current value: ${(selectedInvestment.current_value || selectedInvestment.amount).toFixed(2)}</strong>
+                <br />
+              </>
+            )}
+            <Typography variant="caption" color="textSecondary">
+              Note: Released funds will be added to your main wallet and can be withdrawn.
+            </Typography>
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="releaseAmount"
+            label="Release Amount"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={releaseAmount}
+            onChange={handleReleaseAmountChange}
+            InputProps={{
+              startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>
+            }}
+            sx={{ mt: 2 }}
+          />
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseReleaseDialog}>Cancel</Button>
+          <Button
+            onClick={handleRelease}
+            variant="contained"
+            color="secondary"
+            disabled={loading || !releaseAmount}
+          >
+            {loading ? 'Processing...' : 'Release Funds'}
           </Button>
         </DialogActions>
       </Dialog>

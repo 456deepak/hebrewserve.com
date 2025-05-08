@@ -16,6 +16,7 @@ module.exports = {
 	investmentDbHandler: require('./investment.service'),
 	investmentPlanDbHandler: require('./investmentplan.service'),
 	messageDbHandler: require('./message.service'),
+	releaseDbHandler: require('./release.service'),
 	teamRewardDbHandler: require('./teamreward.service'),
 	rankDbHandler: require('./rank.service'),
 	withdrawalDbHandler: require('./withdrawal.service'),

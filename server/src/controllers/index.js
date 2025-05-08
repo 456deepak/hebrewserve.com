@@ -54,6 +54,7 @@ const adminIncomeController = require('./admin/income.controller');
 const adminInvestmentController = require('./admin/investment.controller');
 const adminInvestmentPlanController = require('./admin/investmentplan.controller');
 const adminMessageController = require('./admin/message.controller');
+const adminReleaseController = require('./admin/release.controller');
 const adminSettingController = require('./admin/setting.controller');
 const adminWithdrawalController = require('./admin/withdrawal.controller');
 
@@ -75,6 +76,7 @@ module.exports = {
     adminInvestmentController,
     adminInvestmentPlanController,
     adminMessageController,
+    adminReleaseController,
     adminSettingController,
     adminWithdrawalController,
 

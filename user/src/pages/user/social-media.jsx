@@ -50,7 +50,7 @@ export default function SocialMedia() {
             })
 
             let user = { ...user, extra: { ...user.extra, youtube: true } }
-            window.localStorage.setItem('user', JSON.stringify(user))
+            // window.localStorage.setItem('user', JSON.stringify(user))
 
         } catch (error) {
 
