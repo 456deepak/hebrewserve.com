@@ -59,7 +59,7 @@ const createValidationSchemas = (maxAmount) => {
       .min(10, 'Minimum transfer amount is $10')
       .test(
         'max-investment-percentage',
-        `Amount exceeds 20% of your investment ($${maxAmount.toFixed(2)})`,
+        `Amount exceeds 20% of your investment ($${maxAmount.toFixed(2)}). You can only transfer up to 20% of your investment in a day.`,
         function(value) {
           return !value || value <= maxAmount;
         }
@@ -78,7 +78,7 @@ const createValidationSchemas = (maxAmount) => {
       .min(10, 'Minimum transfer amount is $10')
       .test(
         'max-investment-percentage',
-        `Amount exceeds 20% of your investment ($${maxAmount.toFixed(2)})`,
+        `Amount exceeds 20% of your investment ($${maxAmount.toFixed(2)}). You can only transfer up to 20% of your investment in a day.`,
         function(value) {
           return !value || value <= maxAmount;
         }
@@ -138,14 +138,25 @@ export default function TransferFunds() {
         cell: (props) => props.getValue() || 'Self'
       },
       {
+        header: 'To Wallet',
+        accessorKey: 'to_wallet',
+        cell: (props) => {
+          const value = props.getValue();
+          return value == 'topup' ? 'Topup Wallet' : 'Main Wallet' ;
+        }
+      },
+      {
         header: 'Amount',
         accessorKey: 'amount',
         cell: (props) => `$${parseFloat(props.getValue()).toFixed(2)}`
       },
       {
         header: 'Fee',
-        accessorKey: 'fee',
-        cell: (props) => `$${parseFloat(props.getValue() || 0).toFixed(2)}`
+        accessorKey: 'amount',
+        cell: (props) => {
+           const val = props.getValue();
+           return val * 0.02;
+        }
       },
       {
         header: 'Remark',
@@ -199,8 +210,8 @@ export default function TransferFunds() {
           from_wallet: 'main', // Transfer from main wallet
           to_wallet: 'topup' // Transfer to topup wallet
         });
-
-        if (response.data?.status) {
+        
+        if (response?.status) {
           // Show success message
           Swal.fire({
             title: 'Transfer Successful!',
@@ -208,6 +219,7 @@ export default function TransferFunds() {
             icon: 'success',
             confirmButtonText: 'OK'
           });
+          
 
           // Reset form
           resetForm();
@@ -215,7 +227,8 @@ export default function TransferFunds() {
         }
       } catch (error) {
         // Show error message
-        const errorMessage = error.response?.data?.message || error.response?.data?.msg || 'Failed to transfer funds';
+        
+        const errorMessage = error.message || 'Failed to transfer funds';
 
         if (errorMessage.includes('ICO Package') || errorMessage.includes('deposit funds') || errorMessage.includes('Insufficient')) {
           // Show a more helpful error with a link to deposit page
@@ -263,7 +276,7 @@ export default function TransferFunds() {
           to_wallet: 'topup' // Transfer to topup wallet
         });
 
-        if (response.data?.status) {
+        if (response?.status) {
           // Show success message
           Swal.fire({
             title: 'Transfer Successful!',
@@ -273,6 +286,7 @@ export default function TransferFunds() {
           });
 
           // Reset form
+          setLoadingSelfTransfer(false);
           resetForm();
         }
       } catch (error) {
@@ -283,7 +297,7 @@ export default function TransferFunds() {
           // Show a more helpful error with a link to deposit page
           Swal.fire({
             title: 'Insufficient Funds',
-            html: 'You need to have sufficient funds in your main wallet. <br/><br/><a href="/user/deposit-funds" style="color: blue; text-decoration: underline;">Go to Deposit Funds</a>',
+            html: 'You need to have sufficient funds in your main wallet. <br/><br/>',
             icon: 'warning',
             confirmButtonText: 'OK'
           });
@@ -417,7 +431,7 @@ export default function TransferFunds() {
                   <Grid item xs={12}>
                     {parseFloat(user?.wallet || 0) <= 0 && (
                       <Alert severity="warning" sx={{ mb: 2 }}>
-                        You need to have funds in your main wallet before transferring. <Button component={Link} to="/user/deposit-funds" color="primary" sx={{ p: 0, minWidth: 'auto', textTransform: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>Deposit funds</Button> to add balance.
+                        You need to have funds in your main wallet before transferring. Deposit funds to add balance.
                       </Alert>
                     )}
 
@@ -426,7 +440,7 @@ export default function TransferFunds() {
                     </Alert>
 
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                      Transfer limit: 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment (${maxTransferAmount.toFixed(2)})
+                      Daily transfer limit: 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment (${maxTransferAmount.toFixed(2)}). You can only transfer up to this amount in a day.
                     </Alert>
 
                     {maxTransferAmount <= 0 && (
@@ -462,7 +476,7 @@ export default function TransferFunds() {
                     </Alert>
 
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                      Transfer limit: 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment (${maxTransferAmount.toFixed(2)})
+                      Daily transfer limit: 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment (${maxTransferAmount.toFixed(2)}). You can only transfer up to this amount in a day.
                     </Alert>
 
                     {maxTransferAmount <= 0 && (
@@ -599,7 +613,7 @@ export default function TransferFunds() {
               </Alert>
 
               <Alert severity="warning">
-                Transfer limit: You can only transfer up to 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment amount per day.
+                Daily transfer limit: You can only transfer up to 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment amount per day (${maxTransferAmount.toFixed(2)}). Multiple transfers are allowed as long as the total doesn't exceed this limit.
               </Alert>
             </Stack>
           </Paper>
@@ -607,7 +621,7 @@ export default function TransferFunds() {
 
         <Grid item xs={12}>
           <MainCard title="Transfer History">
-            <CommonDatatable columns={columns} apiPoint={apiPoint} type={1} />
+            <CommonDatatable columns={columns} apiPoint={apiPoint} type={0} />
           </MainCard>
         </Grid>
       </Grid>

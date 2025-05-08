@@ -20,8 +20,7 @@ module.exports = {
             const username = userInfo?.username;
 
             // Get transfers where user is either sender or receiver
-            let getList = await fundTransferDbHandler.getAll(reqObj, username || user_id);
-            console.log('getList', getList);
+            let getList = await fundTransferDbHandler.getAll(reqObj,user_id);
             responseData.msg = 'Data fetched successfully!';
             responseData.data = getList;
             return responseHelper.success(res, responseData);
@@ -102,8 +101,8 @@ module.exports = {
                 const investmentAmount = userFrom.last_investment_amount > 0 ? userFrom.last_investment_amount : userFrom.total_investment;
                 const maxTransferAmount = investmentAmount * 0.2; // 20% of investment amount
 
-                if (reqObj.amount > maxTransferAmount) {
-                    responseData.msg = `Transfer amount exceeds the maximum limit of 20% of your ${userFrom.last_investment_amount > 0 ? 'latest' : 'total'} investment ($${maxTransferAmount.toFixed(2)})`;
+                if (reqObj.amount != maxTransferAmount) {
+                    responseData.msg = `Transfer amount is  20% of your ${userFrom.last_investment_amount > 0 ? 'latest' : 'total'} investment ($${maxTransferAmount.toFixed(2)})`;
                     return responseHelper.error(res, responseData);
                 }
             }

@@ -15,7 +15,7 @@ module.exports = {
         try {
             // Set type parameter for filtering
             // type 2 = admin transfers only
-            if (reqObj.type === '2') {
+            if (reqObj.type == '2') {
                 reqObj.type = 2; // Filter for admin transfers only
             }
 
@@ -24,9 +24,9 @@ module.exports = {
 
             // Format the response for the datatable
             responseData.msg = 'Data fetched successfully!';
-            responseData.result = {
-                list: getList.docs || [],
-                count: getList.totalDocs || 0,
+            responseData.data = {
+                list: getList.list || [],
+                count: getList.total || 0,
                 totalPages: getList.totalPages || 0,
                 page: getList.page || 1
             };

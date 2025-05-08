@@ -133,6 +133,9 @@ class FundTransfer {
 					user_from: {
 						$ifNull: ["$user_from.name", "Admin"]
 					},
+					to_wallet : {
+						$ifNull: ["$to_wallet", ""]
+					},
 					amount: 1,
 					remark: 1,
 					type: 1,

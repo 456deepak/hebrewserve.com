@@ -57,18 +57,18 @@ export default function FundTransferManagement() {
       },
       {
         header: 'From',
-        accessorKey: 'from_wallet',
+        accessorKey: 'user_from',
         cell: (props) => {
           const value = props.getValue();
-          return value === 'admin' ? 'Admin' : value === 'main' ? 'Main Wallet' : 'Topup Wallet';
+          return value =="Admin" ? "Admin" : value;
         }
       },
       {
-        header: 'To',
+        header: 'Wallet Type',
         accessorKey: 'to_wallet',
         cell: (props) => {
           const value = props.getValue();
-          return value === 'main' ? 'Main Wallet' : 'Topup Wallet';
+          return value == 'topup' ? 'Topup Wallet' : 'Main Wallet' ;
         }
       },
       {

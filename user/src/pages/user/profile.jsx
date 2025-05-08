@@ -115,7 +115,7 @@ export default function TabPersonal() {
                 enableReinitialize={true}
                 validationSchema={Yup.object().shape({
                     firstname: Yup.string().max(255).required('First Name is required.'),
-                    lastname: Yup.string().max(255).required('Last Name is required.'),
+                    // lastname: Yup.string().max(255).required('Last Name is required.'),
                     email: Yup.string().email('Invalid email address.').max(255).required('Email is required.'),
                     dob: Yup.date().max(maxDate, 'Age should be 18+ years.'),
                     contact: Yup.number(),

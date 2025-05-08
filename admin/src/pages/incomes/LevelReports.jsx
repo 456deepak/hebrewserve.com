@@ -31,14 +31,14 @@ export default function TeamCommission() {
           return 'Team Commission';
         }
       },
-      {
-        header: 'From User',
-        accessorKey: 'user_id_from',
-        cell: (props) => {
-          const value = props.getValue();
-          return value || 'N/A';
-        }
-      },
+      // {
+      //   header: 'From User',
+      //   accessorKey: 'user_id_from',
+      //   cell: (props) => {
+      //     const value = props.getValue();
+      //     return value || 'N/A';
+      //   }
+      // },
       {
         header: 'Level',
         accessorKey: 'level',
@@ -47,14 +47,14 @@ export default function TeamCommission() {
           return `Level ${level}`;
         }
       },
-      {
-        header: 'Daily Profit',
-        accessorKey: 'extra.dailyProfit',
-        cell: (props) => {
-          const value = props?.getValue() || 0;
-          return `$${parseFloat(value).toFixed(2)}`;
-        }
-      },
+      // {
+      //   header: 'Daily Profit',
+      //   accessorKey: 'extra.dailyProfit',
+      //   cell: (props) => {
+      //     const value = props?.getValue() || 0;
+      //     return `$${parseFloat(value).toFixed(2)}`;
+      //   }
+      // },
       {
         header: 'Commission Rate',
         accessorKey: 'extra.commissionRate',
@@ -74,14 +74,14 @@ export default function TeamCommission() {
           return `$${parseFloat(value).toFixed(2)}`;
         }
       },
-      {
-        header: 'Status',
-        accessorKey: 'status',
-        cell: (props) => {
-          const value = props.getValue() || 'pending';
-          return value.charAt(0).toUpperCase() + value.slice(1);
-        }
-      },
+      // {
+      //   header: 'Status',
+      //   accessorKey: 'status',
+      //   cell: (props) => {
+      //     const value = props.getValue() || 'pending';
+      //     return value.charAt(0).toUpperCase() + value.slice(1);
+      //   }
+      // },
       {
         header: 'Date',
         accessorKey: 'created_at',

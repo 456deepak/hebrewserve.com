@@ -50,14 +50,14 @@ export default function FirstDepositBonus() {
           return `$${parseFloat(value).toFixed(2)}`;
         }
       },
-      {
-        header: 'Status',
-        accessorKey: 'status',
-        cell: (props) => {
-          const value = props.getValue() || 'pending';
-          return value.charAt(0).toUpperCase() + value.slice(1);
-        }
-      },
+      // {
+      //   header: 'Status',
+      //   accessorKey: 'status',
+      //   cell: (props) => {
+      //     const value = props.getValue() || 'pending';
+      //     return value.charAt(0).toUpperCase() + value.slice(1);
+      //   }
+      // },
       {
         header: 'Date',
         accessorKey: 'created_at',

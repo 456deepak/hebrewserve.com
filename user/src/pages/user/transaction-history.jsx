@@ -85,16 +85,19 @@ export default function TransactionHistory() {
 
         // Fetch all withdrawals
         const withdrawalResponse = await axios.get('/get-all-withdrawals');
+        console.log(withdrawalResponse)
         if (withdrawalResponse.data && withdrawalResponse.data.status) {
-          const withdrawals = withdrawalResponse.data.data?.result || withdrawalResponse.data.data || [];
+          const withdrawals = withdrawalResponse.data.result.list 
+
           // Calculate total withdrawals by summing up all withdrawal amounts
           const totalWithdrawalAmount = withdrawals.reduce((total, withdrawal) => {
             // Only count approved withdrawals (status 1)
             if (withdrawal.status === 1) {
-              return total + parseFloat(withdrawal.amount || 0);
+              return total + parseFloat(withdrawal.amount);
             }
             return total;
           }, 0);
+         
           setTotalWithdrawals(totalWithdrawalAmount);
         } else {
           // Fallback to wallet_withdraw if API fails

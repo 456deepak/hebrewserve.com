@@ -317,41 +317,6 @@ export default function DashboardAnalytics() {
         // Use the new dashboard-data endpoint that provides all necessary data
         const response = await axios.get('/user/dashboard-data');
 
-        // If no response, try a fallback approach
-        if (1) {
-          console.warn('No response data received, trying alternative endpoint');
-          const fallbackResponse = await fetch('https://server.hebrewserve.com/api/v1/user/dashboard-data', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('serviceToken')}`,
-              'Content-Type': 'application/json'
-            }
-          });
-
-
-          if (fallbackResponse.ok) {
-            const fallbackData = await fallbackResponse.json();
-            console.log('Fallback data received:', fallbackData);
-            // Extract the user data from the result property
-            if (fallbackData.status && fallbackData.result) {
-              setUserData(fallbackData.result);
-              setLoading(false);
-              return;
-            }
-            return fallbackData;
-          } else {
-            console.error('Fallback request failed:', fallbackResponse.status);
-            // Try the original profile endpoint as a last resort
-            const profileResponse = await axios.get('/user/profile');
-            if (profileResponse && profileResponse.data) {
-              console.log('Using profile data as fallback');
-              return profileResponse.data;
-            }
-            throw new Error('All API requests failed');
-          }
-        }
-
-
         if (response.data?.status) {
           // The data could be in either response.data.data or response.data.result
           const userData = response.data.data || response.data.result;
