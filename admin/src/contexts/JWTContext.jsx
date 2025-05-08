@@ -57,7 +57,7 @@ export const JWTProvider = ({ children }) => {
         if (serviceToken && verifyToken(serviceToken)) {
           setSession(serviceToken);
           const response = await axios.get('/get-profile');
-          if (response.data?.status) window.localStorage.setItem('user', JSON.stringify(response.data?.result));
+          // if (response.data?.status) window.localStorage.setItem('user', JSON.stringify(response.data?.result));
           const { result: user } = response.data;
 
           dispatch({

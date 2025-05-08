@@ -11,6 +11,7 @@ module.exports.investmentPlanModel = require('./investmentplan.model');
 module.exports.investmentModel = require('./investment.model');
 module.exports.messageModel = require('./message.model');
 module.exports.rankModel = require('./rank.model');
+module.exports.releaseModel = require('./release.model');
 module.exports.teamRewardModel = require('./teamreward.model');
 module.exports.withdrawalModel = require('./withdrawal.model');
 module.exports.settingModel = require('./setting.model');

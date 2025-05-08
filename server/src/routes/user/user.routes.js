@@ -205,6 +205,9 @@ module.exports = () => {
     Router.post("/add-investment", validationMiddleware(investmentValidation.add, 'body'), userInvestmentController.add);
     Router.post("/add-trading-package", userInvestmentController.addTradingPackage);
     Router.get("/get-user-investments", userInvestmentController.getAllUserInvestments);
+    Router.post("/release-investment", userInvestmentController.releaseInvestment);
+    Router.get("/get-user-releases", userInvestmentController.getAllReleases);
+    Router.get("/get-release-sum", userInvestmentController.getReleaseSum);
     Router.post("/addstake", validationMiddleware(investmentValidation.add2, 'body'), userInvestmentController.add2);
     Router.post("/addstakecoin", validationMiddleware(investmentValidation.add3, 'body'), userInvestmentController.add3);
 

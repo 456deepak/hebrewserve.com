@@ -230,14 +230,7 @@ const ArbitrageTrade = () => {
             title: 'Success!',
             text: 'Daily profit has been activated for your account today. You will receive your daily profit when the system processes it.'
           });
-
-          // Store activation state in local storage with user ID to make it user-specific
-          const userId = updatedUserData?._id;
-          if (userId) {
-            localStorage.setItem(`dailyProfitActivated_${userId}`, 'true');
-            localStorage.setItem(`activationDate_${userId}`, new Date().toDateString());
-            console.log(`Stored activation state for user ${userId} in localStorage`);
-          }
+          
         } else {
           // If the response doesn't include user data, fetch it separately
           try {
@@ -258,14 +251,6 @@ const ArbitrageTrade = () => {
                 title: 'Success!',
                 text: 'Daily profit has been activated for your account today. You will receive your daily profit when the system processes it.'
               });
-
-              // Store activation state in local storage with user ID to make it user-specific
-              const userId = updatedUserData?._id;
-              if (userId) {
-                localStorage.setItem(`dailyProfitActivated_${userId}`, 'true');
-                localStorage.setItem(`activationDate_${userId}`, new Date().toDateString());
-                console.log(`Stored activation state for user ${userId} in localStorage`);
-              }
             }
           } catch (profileError) {
             console.error('Error fetching updated profile:', profileError);
@@ -322,21 +307,6 @@ const ArbitrageTrade = () => {
     return false;
   };
 
-  // Check local storage for activation state on component mount
-  useEffect(() => {
-    // We'll check user-specific localStorage items after we have the user data
-    // This is just to clean up any old format items
-    const storedActivation = localStorage.getItem('dailyProfitActivated');
-    const storedDate = localStorage.getItem('activationDate');
-
-    // Remove old format items if they exist
-    if (storedActivation) {
-      localStorage.removeItem('dailyProfitActivated');
-    }
-    if (storedDate) {
-      localStorage.removeItem('activationDate');
-    }
-  }, []);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -362,33 +332,6 @@ const ArbitrageTrade = () => {
           let isActivated = userData.dailyProfitActivated === true;
           console.log('Initial activation status from database:', isActivated);
 
-          // Only check localStorage if we have a userId
-          if (userId && !isActivated) {
-            // Check user-specific localStorage for today's activation
-            const storedActivation = localStorage.getItem(`dailyProfitActivated_${userId}`);
-            const storedDate = localStorage.getItem(`activationDate_${userId}`);
-            const today = new Date().toDateString();
-
-            console.log(`Checking localStorage for user ${userId}:`, {
-              storedActivation,
-              storedDate,
-              today
-            });
-
-            // If we have a valid user-specific localStorage activation but server doesn't show it,
-            // update the userData to reflect the activation
-            if (storedActivation === 'true' && storedDate === today) {
-              // Set directly in user document
-              userData.dailyProfitActivated = true;
-              isActivated = true;
-              console.log(`Using activation state from localStorage for user ${userId}`);
-            }
-          }
-
-          // Ensure the extra object exists
-          if (!userData.extra) {
-            userData.extra = {};
-          }
 
           setUserData(userData);
 

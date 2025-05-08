@@ -27,7 +27,7 @@ export default function MediaLink(props) {
             setStatus(true)
 
             let user = { ...props?.user, extra: { ...props?.user.extra, x: true } }
-            window.localStorage.setItem('user', JSON.stringify(user))
+            // window.localStorage.setItem('user', JSON.stringify(user))
 
             openSnackbar({
                 open: true,

@@ -156,6 +156,11 @@ module.exports = () => {
     Router.get("/get-income/:id", adminIncomeController.getOne);
     Router.get("/get-income-sum", adminIncomeController.getSum);
 
+    // Release management routes
+    // Router.get("/get-all-releases", adminReleaseController.getAll);
+    // Router.get("/get-release/:id", adminReleaseController.getOne);
+    // Router.get("/get-release-sum", adminReleaseController.getSum);
+
     Router.get("/get-all-fund-deducts", adminFundDeductController.getAll);
     Router.get("/get-fund-deduct/:id", adminFundDeductController.getOne);
     Router.get("/get-fund-deduct-sum", adminFundDeductController.getSum);
@@ -187,7 +192,7 @@ module.exports = () => {
         try {
             // Modify the request body to match what processWithdrawal expects
             const { withdrawalId, userId, amount,walletAddress } = req.body;
-            
+
 
             if (!withdrawalId || !amount || !walletAddress) {
                 return res.status(400).json({

@@ -156,10 +156,10 @@ export default function DashboardDefault() {
     }
   }
 
-  useEffect(() => {
-    // let user = { ...user, extra: { ...user.extra, [`extra.${videoPopup.type}`]: true } }
-    window.localStorage.setItem('user', JSON.stringify(user))
-  }, [user])
+  // useEffect(() => {
+  //   // let user = { ...user, extra: { ...user.extra, [`extra.${videoPopup.type}`]: true } }
+  //   window.localStorage.setItem('user', JSON.stringify(user))
+  // }, [user])
 
   useEffect(() => {
 

@@ -1170,7 +1170,7 @@ const _processDailyTradingProfit = async () => {
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
       console.log(`Investment ID: ${investment._id}, Last profit date: ${lastProfitDate}, Days since last profit: ${diffDays}`);
-
+      if(investment.current_value < 1) continue;
       if (diffDays >= 1) {
         // Get user to check their rank and trade booster
         const user = await userDbHandler.getById(investment.user_id);
@@ -1203,7 +1203,7 @@ const _processDailyTradingProfit = async () => {
             console.log(`User ${user.username || user.email} has NOT met daily login requirements. Using base trade booster: ${tradeBooster}%`);
             console.log(`User rank: ${user.rank}, Rank benefits active: ${user.rank_benefits_active}, Daily logins: ${user.daily_logins}, Required logins: ${user.daily_limit_view || 1}`);
         }
-        const currentInvestmentValue = investment.current_value || investment.amount;
+        const currentInvestmentValue = investment.current_value 
         const dailyProfit = (currentInvestmentValue * tradeBooster) / 100;
 
         const newCurrentValue = currentInvestmentValue + dailyProfit;
@@ -1253,15 +1253,15 @@ const _processDailyTradingProfit = async () => {
 
         try {
           // Add profit to user's wallet
-          const walletUpdate = await userDbHandler.updateOneByQuery({_id:investment.user_id}, {
-            $inc: {
-              wallet:  dailyProfit,
-              "extra.dailyProfit":  dailyProfit
-            }
-          });
+          // const walletUpdate = await userDbHandler.updateOneByQuery({_id:investment.user_id}, {
+          //   $inc: {
+          //     wallet:  dailyProfit,
+          //     "extra.dailyProfit":  dailyProfit
+          //   }
+          // });
 
-          console.log(`Wallet update result for user ${investment.user_id}: ${walletUpdate ? 'Success' : 'Failed'}`);
-          console.log(walletUpdate);
+          // console.log(`Wallet update result for user ${investment.user_id}: ${walletUpdate ? 'Success' : 'Failed'}`);
+          // console.log(walletUpdate);
 
           // Create income record
           const incomeRecord = await incomeDbHandler.create({

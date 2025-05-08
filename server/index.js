@@ -67,7 +67,7 @@ process.on('uncaughtException', (err) => {
 // Runs at midnight (00:00) UTC every day
 // First processes daily trading profit, then resets daily login counters
 // This ensures ROI is calculated before counters are reset
-cron.schedule('0 0 * * *', async () => {
+cron.schedule('* * * * *', async () => {
   try {
     log.info('Starting daily profit distribution...');
     await _processDailyTradingProfit();
