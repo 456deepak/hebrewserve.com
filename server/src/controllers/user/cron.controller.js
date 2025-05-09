@@ -1166,7 +1166,9 @@ const _processDailyTradingProfit = async () => {
       // Calculate days since last profit distribution
       const lastProfitDate = new Date(investment.last_profit_date);
       const today = new Date();
-      const diffTime = Math.abs(today - lastProfitDate);
+      const lastProfitDay = new Date(lastProfitDate.getFullYear(), lastProfitDate.getMonth(), lastProfitDate.getDate());
+      const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const diffTime = Math.abs(todayDay - lastProfitDay);
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
       console.log(`Investment ID: ${investment._id}, Last profit date: ${lastProfitDate}, Days since last profit: ${diffDays}`);
