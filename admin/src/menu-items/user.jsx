@@ -2,7 +2,7 @@
 import { FormattedMessage } from 'react-intl';
 
 // assets
-import { Story, Fatrows, PresentionChart, Lock } from 'iconsax-react';
+import { Story, Fatrows, PresentionChart, Lock, MoneyRemove, MoneyAdd } from 'iconsax-react';
 
 // type
 
@@ -12,7 +12,9 @@ const icons = {
   statistics: Story,
   data: Fatrows,
   chart: PresentionChart,
-  lock: Lock
+  lock: Lock,
+  moneyRemove: MoneyRemove,
+  moneyAdd: MoneyAdd
 };
 
 // ==============================|| MENU ITEMS - WIDGETS ||============================== //
@@ -42,21 +44,21 @@ const profile = {
       title: <FormattedMessage id="Fund Transfer Management" />,
       type: 'item',
       url: '/user/fundTransferManagement',
-      icon: icons.data
+      icon: icons.moneyAdd
     },
+    {
+      id: 'deduct-funds',
+      title: <FormattedMessage id="Deduct Funds" />,
+      type: 'item',
+      url: '/user/deductFunds',
+      icon: icons.moneyRemove
+    }
     // {
     //   id: 'change-password',
     //   title: <FormattedMessage id="Change Password" />,
     //   type: 'item',
     //   url: '/apps/profiles/account',
     //   icon: icons.lock
-    // },
-    // {
-    //   id: 'deduct-funds',
-    //   title: <FormattedMessage id="Deduct Funds" />,
-    //   type: 'item',
-    //   url: '/user/deductFunds',
-    //   icon: icons.data
     // }
   ]
 };
