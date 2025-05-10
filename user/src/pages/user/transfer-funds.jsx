@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -57,13 +57,7 @@ const createValidationSchemas = (maxAmount) => {
       .required('Amount is required')
       .positive('Amount must be positive')
       .min(10, 'Minimum transfer amount is $10')
-      .test(
-        'max-investment-percentage',
-        `Amount exceeds 20% of your investment ($${maxAmount.toFixed(2)}). You can only transfer up to 20% of your investment in a day.`,
-        function(value) {
-          return !value || value <= maxAmount;
-        }
-      ),
+      .max(100000000, 'Maximum transfer amount is $100,000,000'),
     remark: Yup.string()
       .required('Remark is required')
       .min(3, 'Remark must be at least 3 characters')
@@ -78,9 +72,9 @@ const createValidationSchemas = (maxAmount) => {
       .min(10, 'Minimum transfer amount is $10')
       .test(
         'max-investment-percentage',
-        `Amount exceeds 20% of your investment ($${maxAmount.toFixed(2)}). You can only transfer up to 20% of your investment in a day.`,
+        `Amount must be exactly 20% of your investment ($${maxAmount.toFixed(2)}).`,
         function(value) {
-          return !value || value <= maxAmount;
+          return !value || Math.abs(value - maxAmount) < 0.01; // Allow small rounding differences
         }
       ),
     remark: Yup.string()
@@ -100,6 +94,8 @@ export default function TransferFunds() {
   const [usernameCheckLoading, setUsernameCheckLoading] = useState(false);
   const [usernameValid, setUsernameValid] = useState(null);
   const [maxTransferAmount, setMaxTransferAmount] = useState(0);
+  // Check if user has already made a self-transfer today
+  const [selfTransferAvailable, setSelfTransferAvailable] = useState(true);
 
   // Get user data from Auth context
   const { user } = useAuth();
@@ -258,7 +254,7 @@ export default function TransferFunds() {
   // Self transfer form
   const selfTransferFormik = useFormik({
     initialValues: {
-      amount: '',
+      amount: maxTransferAmount.toFixed(2), // Pre-fill with exact 20% amount
       remark: ''
     },
     validationSchema: selfTransferSchema,
@@ -318,6 +314,30 @@ export default function TransferFunds() {
     }
   });
 
+  // Update amount field when maxTransferAmount changes
+  useEffect(() => {
+    if (maxTransferAmount > 0) {
+      // Only update self-transfer form with the exact amount
+      selfTransferFormik.setFieldValue('amount', maxTransferAmount.toFixed(2));
+    }
+  }, [maxTransferAmount]);
+
+  // Check if user has already made a self-transfer today
+  useEffect(() => {
+    if (user?.last_transfer_date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Start of today
+      const lastTransferDate = new Date(user.last_transfer_date);
+      lastTransferDate.setHours(0, 0, 0, 0);
+      
+      if (lastTransferDate.getTime() === today.getTime()) {
+        setSelfTransferAvailable(false);
+      } else {
+        setSelfTransferAvailable(true);
+      }
+    }
+  }, [user?.last_transfer_date]);
+
   return (
     <>
       <Grid container spacing={3}>
@@ -352,6 +372,18 @@ export default function TransferFunds() {
             <TabPanel value={tabValue} index={0}>
               <form onSubmit={userToUserFormik.handleSubmit}>
                 <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    {parseFloat(user?.wallet || 0) <= 0 && (
+                      <Alert severity="warning" sx={{ mb: 2 }}>
+                        You need to have funds in your main wallet before transferring. Deposit funds to add balance.
+                      </Alert>
+                    )}
+
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      A 2% transfer fee will be deducted from the transfer amount.
+                    </Alert>
+                  </Grid>
+
                   <Grid item xs={12}>
                     <Stack spacing={1}>
                       <InputLabel htmlFor="user_id">Recipient Username</InputLabel>
@@ -429,26 +461,6 @@ export default function TransferFunds() {
                   </Grid>
 
                   <Grid item xs={12}>
-                    {parseFloat(user?.wallet || 0) <= 0 && (
-                      <Alert severity="warning" sx={{ mb: 2 }}>
-                        You need to have funds in your main wallet before transferring. Deposit funds to add balance.
-                      </Alert>
-                    )}
-
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      A 2% transfer fee will be deducted from the transfer amount.
-                    </Alert>
-
-                    <Alert severity="warning" sx={{ mb: 2 }}>
-                      Daily transfer limit: 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment (${maxTransferAmount.toFixed(2)}). You can only transfer up to this amount in a day.
-                    </Alert>
-
-                    {maxTransferAmount <= 0 && (
-                      <Alert severity="error" sx={{ mb: 2 }}>
-                        You need to have active investments to make transfers. <Button component={Link} to="/investments/invest" color="primary" sx={{ p: 0, minWidth: 'auto', textTransform: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>Invest now</Button> to enable transfers.
-                      </Alert>
-                    )}
-
                     <LoadingButton
                       disableElevation
                       loading={loadingUserToUser}
@@ -476,73 +488,56 @@ export default function TransferFunds() {
                     </Alert>
 
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                      Daily transfer limit: 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment (${maxTransferAmount.toFixed(2)}). You can only transfer up to this amount in a day.
+                      Transfer amount must be exactly 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment (${maxTransferAmount.toFixed(2)}).
                     </Alert>
 
-                    {maxTransferAmount <= 0 && (
+                    {!selfTransferAvailable && (
                       <Alert severity="error" sx={{ mb: 2 }}>
-                        You need to have active investments to make transfers. <Button component={Link} to="/investments/invest" color="primary" sx={{ p: 0, minWidth: 'auto', textTransform: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>Invest now</Button> to enable transfers.
-                      </Alert>
-                    )}
-
-                    {parseFloat(user?.wallet || 0) <= 0 && (
-                      <Alert severity="warning" sx={{ mb: 2 }}>
-                        You need to have funds in your main wallet before transferring. <Button component={Link} to="/user/deposit-funds" color="primary" sx={{ p: 0, minWidth: 'auto', textTransform: 'none', fontWeight: 'bold', textDecoration: 'underline' }}>Deposit funds</Button> to add balance.
+                        You have already made a transfer today. You can only make one self-transfer per day.
                       </Alert>
                     )}
                   </Grid>
 
                   <Grid item xs={12}>
                     <Stack spacing={1}>
-                      <InputLabel htmlFor="amount">Amount ($)</InputLabel>
-                      <OutlinedInput
-                        id="amount"
+                      <InputLabel htmlFor="self-amount">Amount</InputLabel>
+                      <TextField
+                        fullWidth
+                        id="self-amount"
+                        name="amount"
                         type="number"
                         value={selfTransferFormik.values.amount}
-                        name="amount"
-                        placeholder="Enter transfer amount"
                         onChange={selfTransferFormik.handleChange}
                         error={selfTransferFormik.touched.amount && Boolean(selfTransferFormik.errors.amount)}
-                        fullWidth
+                        helperText={selfTransferFormik.touched.amount && selfTransferFormik.errors.amount}
+                        inputProps={{ readOnly: true }} // Make the field read-only
                       />
-                      {selfTransferFormik.touched.amount && selfTransferFormik.errors.amount && (
-                        <FormHelperText error>{selfTransferFormik.errors.amount}</FormHelperText>
-                      )}
                     </Stack>
                   </Grid>
 
                   <Grid item xs={12}>
                     <Stack spacing={1}>
-                      <InputLabel htmlFor="remark">Remark</InputLabel>
-                      <OutlinedInput
-                        id="remark"
-                        type="text"
-                        value={selfTransferFormik.values.remark}
+                      <InputLabel htmlFor="self-remark">Remark</InputLabel>
+                      <TextField
+                        fullWidth
+                        id="self-remark"
                         name="remark"
-                        placeholder="Enter remark for this transfer"
+                        placeholder="Enter remark"
+                        value={selfTransferFormik.values.remark}
                         onChange={selfTransferFormik.handleChange}
                         error={selfTransferFormik.touched.remark && Boolean(selfTransferFormik.errors.remark)}
-                        fullWidth
-                        multiline
-                        rows={2}
+                        helperText={selfTransferFormik.touched.remark && selfTransferFormik.errors.remark}
                       />
-                      {selfTransferFormik.touched.remark && selfTransferFormik.errors.remark && (
-                        <FormHelperText error>{selfTransferFormik.errors.remark}</FormHelperText>
-                      )}
                     </Stack>
                   </Grid>
 
                   <Grid item xs={12}>
                     <LoadingButton
-                      disableElevation
-                      loading={loadingSelfTransfer}
                       fullWidth
-                      size="large"
                       type="submit"
                       variant="contained"
-                      color="primary"
-                      startIcon={<WalletMoney />}
-                      disabled={parseFloat(user?.wallet || 0) <= 0 || maxTransferAmount <= 0}
+                      loading={loadingSelfTransfer}
+                      disabled={!selfTransferAvailable || parseFloat(user?.wallet || 0) < parseFloat(selfTransferFormik.values.amount)}
                     >
                       Transfer to Top-up Wallet
                     </LoadingButton>
@@ -613,7 +608,7 @@ export default function TransferFunds() {
               </Alert>
 
               <Alert severity="warning">
-                Daily transfer limit: You can only transfer up to 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment amount per day (${maxTransferAmount.toFixed(2)}). Multiple transfers are allowed as long as the total doesn't exceed this limit.
+                Self Transfer: You can only transfer exactly 20% of your {user?.last_investment_amount > 0 ? 'latest' : 'total'} investment amount per day (${maxTransferAmount.toFixed(2)}), and only once per day.
               </Alert>
             </Stack>
           </Paper>
@@ -628,3 +623,6 @@ export default function TransferFunds() {
     </>
   );
 }
+
+
+
